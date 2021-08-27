@@ -6,7 +6,7 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var {ParseServer} = require('parse-server');
 var oauthshim = require('oauth-shim');
-const config = JSON.parse(fs.readFileSync('./server/config.json'));
+const config = JSON.parse(fs.readFileSync('./config.json'));
 var api = new ParseServer(config.parseConfig);
 var app = express();
 
@@ -14,7 +14,7 @@ var app = express();
 const server = require('http').createServer(app);
 server.listen(8080);
 
-// const parseLiveQueryServer = ParseServer.createLiveQueryServer(server);
+const parseLiveQueryServer = ParseServer.createLiveQueryServer(server);
 
 oauthshim.init([
   {
@@ -35,19 +35,6 @@ app.use('/proxy', oauthshim);
 app.listen(1337, function() {
   console.log('parse-server running on port 1337.');
 });
-
-var request = require('request-promise');
-var solrURL = "http://localhost:8983/solr/brainspell/select";
-ParseServer.Cloud.define("select", async (req) => {
-  const qs = (({ q, fl, start, rows}) => ({ q, fl, start, rows }))(req.params);
-  const res = await request({
-    url: solrURL,
-    qs: qs
-  });
-
-  return JSON.parse(res).response;
-});
-
 
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
