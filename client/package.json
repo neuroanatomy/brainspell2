@@ -1,0 +1,18 @@
+{
+  "name": "brainspell_client",
+  "version": "0.0.1",
+  "description": "brainspell",
+  "main": "index.js",
+  "scripts": {
+    "start": "http-server",
+    "test": "npm run test"
+  },
+  "author": "Roberto Toro",
+  "license": "ISC",
+  "dependencies": {
+    "translucent-viewer": "github:neuroanatomy/translucent-viewer"
+  },
+  "devDependencies": {
+    "eslint-config-naat": "git+https://github.com/neuroanatomy/eslint-config-naat.git"
+  }
+}

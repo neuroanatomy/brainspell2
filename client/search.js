@@ -1,5 +1,5 @@
 /* global Parse */
-import TranslucentCluster from "translucent-viewer/translucent-cluster";
+import TranslucentCluster from "./node_modules/translucent-viewer/translucent-cluster.js";
 
 const params = new URLSearchParams(location.search);
 const sum = [];
@@ -223,6 +223,7 @@ const handleLevelChange = () => {
 const _initTranslucentCluster = async () => {
   trc = new TranslucentCluster({
     elemId: 'viewer',
+    assetsPath: '/node_modules/translucent-viewer/',
     backgroundColor: 0x00ff00,
     alpha: 0,
     brainColor: 'white'

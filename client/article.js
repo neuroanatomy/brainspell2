@@ -1,5 +1,5 @@
 /* globals Parse */
-import TranslucentLocations from "translucent-viewer/translucent-locations";
+import TranslucentLocations from "./node_modules/translucent-viewer/translucent-locations.js";
 
 const setupTouch = () => {
   console.log("configure touch");
@@ -69,6 +69,7 @@ const displayExperiments = (exp) => {
     const l = ex.locations.map((o) => o.split(',').map( (o2) => parseFloat(o2)));
     var trl = new TranslucentLocations({
       elemId:`viewer${i}`,
+      assetsPath: "/node_modules/translucent-viewer/",
       backgroundColor: 0x202020,
       alpha: 1,
       brainColor: 0xffffff,
