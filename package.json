@@ -1,0 +1,28 @@
+{
+  "name": "parse",
+  "version": "0.0.1",
+  "description": "A parse server",
+  "main": "app.js",
+  "scripts": {
+    "start-client": "http-server ./client/",
+    "start-server": "node ./server/bin/www",
+    "test": "npm run test"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cookie-parser": "^1.4.3",
+    "debug": "^4.1.0",
+    "ejs": "^2.6.1",
+    "express": "^4.16.4",
+    "morgan": "^1.9.1",
+    "oauth-shim": "^1.1.4",
+    "parse-server": "^4.10.2",
+    "request": "^2.88.0",
+    "request-promise": "^4.2.2",
+    "translucent-viewer": "github:neuroanatomy/translucent-viewer"
+  },
+  "devDependencies": {
+    "eslint-config-naat": "git+https://github.com/neuroanatomy/eslint-config-naat.git"
+  }
+}

@@ -1,0 +1,90 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="description"
+    content="Open, collaborative platform for a human-curated classification of the neuroimaging literature">
+  <meta name="keywords"
+    content="Open science, Collaboration, Neuroimaging, Cognitive science, Neuroscience, Annotation, Meta-analysis">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <!-- Always force latest IE rendering engine (even in intranet) & Chrome Frame. -->
+  <title>brainspell</title>
+  <link rel="shortcut icon" type="image/x-icon" href="/img/favicon.ico">
+  <link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+  <link rel="stylesheet" type="text/css" href="/css/style.css">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:100" rel="stylesheet" type="text/css">
+</head>
+
+<body>
+
+  <div id="menu">
+    <div>
+      <a href="/doc/index.html" target="_blank"><img id="doc" class="button" title="documentation"
+          style="padding-right:0.5px" src="/img/doc.svg" /></a>
+      <a href="https://github.com/neuroanatomy/BrainBox/issues/new" target="_blank"><img id="bug" class="button"
+          title="report a bug" style="padding-right:0.5px" src="/img/bug.svg" /></a>
+      <a href="https://github.com/neuroanatomy" target="_blank"><img id="github" class="button"
+          title="join our github project" style="width:15px;height:15px;padding-right:1px" src="/img/github.svg" /></a>
+      <div id="MyLogin" style="padding-right:10px" onclick="hello('github').login()">Login with GitHub</div>
+    </div>
+  </div>
+
+  <!-- Content  -->
+  <div class="slide">
+    <!-- Slide: Landing -->
+    <div class="content">
+      <img id="background" src="/img/library.jpg" />
+      <img id="logo" src="img/brainspell.svg" />
+      <h2 style="margin-top:0">Collaborative literature annotation</h2>
+      <p style="margin-bottom:2rem">
+        Welcome to Brainspell. Help us create the first open, human-curated,
+        classification of the neuroimaging literature. You can search for articles to
+        classify or just pick among the randomly selected ones bellow.
+      </p>
+
+      <div style="position:relative;text-align:center">
+        <input id="url" onchange="newSearch(this.value)" style="display:block;width:100%;margin-bottom:1rem" type="text"
+          placeholder="Search articles by title, author, keyword..." />
+        <div style="text-align:right">
+          <span id="num-articles"></span> articles indexed
+        </div>
+      </div>
+
+      <ul id="paper-list">
+      </ul>
+    </div>
+  </div>
+  <!-- End Content-->
+
+  <div class="subsection home">
+    <ul class="paper-list">
+    </ul>
+  </div>
+
+  <!-- Authentication -->
+  <script src="src/hello.polyfill.js"></script>
+  <script src="src/hello.js"></script>
+  <script src="src/modules/github.js"></script>
+  <!--<script src="https://npmcdn.com/parse/dist/parse.js"></script>-->
+
+  <!-- Parse -->
+  <script src="https://npmcdn.com/parse@1.9.2/dist/parse.js"></script>
+
+  <!-- Brainspell -->
+  <script type="module">
+  import * as login from "./src/login.js";
+  import * as index from "./index.js";
+
+  const init = async () => {
+    await login.init();
+    index.init();
+  };
+  init();
+  </script>
+
+
+</body>
+
+</html>

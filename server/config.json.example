@@ -1,0 +1,24 @@
+{
+    "githubConfig": {
+        "clientId": "[COMPLETE]",
+        "clientSecret": "[COMPLETE]"
+    },
+    "parseConfig": {
+        "appId": "[COMPLETE]",
+        "masterKey": "[COMPLETE]",
+        "appName": "brainspell",
+        "cloud": "./cloud/main",
+        "databaseURI": "mongodb://127.0.0.1:27017/parse",
+        "serverURL": "http://localhost:1337/parse",
+        "auth": {
+            "github": {
+                "id": "user_id",
+                "access_token": "access_token"
+            }
+        },
+        "liveQuery": {
+            "classNames": ["RealTime"]
+        }
+    }
+}
+

@@ -1,0 +1,133 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="description"
+    content="Open, collaborative platform for a human-curated classification of the neuroimaging literature">
+  <meta name="keywords"
+    content="Open science, Collaboration, Neuroimaging, Cognitive science, Neuroscience, Annotation, Meta-analysis">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <!-- Always force latest IE rendering engine (even in intranet) & Chrome Frame. -->
+  <title>brainspell</title>
+  <link rel="shortcut icon" type="image/x-icon" href="/img/favicon.ico">
+  <link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+  <link rel="stylesheet" type="text/css" href="/css/style.css">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:100" rel="stylesheet" type="text/css">
+</head>
+
+<body>
+
+  <style>
+    svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      filter: blur(100px);
+    }
+  </style>
+  <svg width="100%" height="100%" viewbox="0 0 400 400">
+    <path d="M0,0h400,v400,h-400,v-400" fill="#111"></path>
+    <path d="M100,70h200,v200,h-200,v-200" fill="#222"></path>
+  </svg>
+
+  <div style="width:100%;height:100%;display:flex;flex-direction:column">
+    <!-- Header (fixed height) -->
+    <div style="flex:0 0 64px; z-index:2">
+      <!-- Top-right menu bar -->
+      <div id="menu">
+        <a href="/" style="text-decoration:none">
+          <img id="small-logo" src="/img/brainspell.svg" />
+        </a>
+        <img id="doc" class="button" title="documentation" src="/img/doc.svg" />
+        <a href="https://github.com/neuroanatomy/BrainBox/issues/new" target="_blank"><img id="bug" class="button"
+            title="report a bug" src="/img/bug.svg" /></a>
+        <a href="https://github.com/neuroanatomy" target="_blank"><img id="github" class="button"
+            title="join our github project" style="width:15px;height:15px" src="/img/github.svg" /></a>
+        <div id="MyLogin" style="padding-right:10px" onclick="hello('github').login()">Login with GitHub</div>
+      </div>
+    </div>
+
+    <!-- Content (variable height) -->
+    <div style="flex:1 0 auto">
+      <!-- Data -->
+      <div id="data">
+        <div id="content" style="display:flex;justify-content:center">
+          <div id="article">
+            <!-- Viewer -->
+            <div id="viewer-container">
+              <div id="viewer-info"></div>
+              <div id="viewer"></div>
+              <input type="range" id="level" /><span id="levelValue"></span><br />
+            </div>
+
+            <!-- Search -->
+            <div style="position:relative;text-align:center">
+              <input id="url" onchange="newSearch(this.value)" style="display:block;width:100%;margin-bottom:1rem"
+                type="text" placeholder="Search articles by title, author, keyword..." />
+              <div style="text-align:right">
+                <span id="num-articles"></span> articles indexed
+              </div>
+            </div>
+
+            <!-- Data -->
+            <div id="query-result">
+              <span id="num-found"></span>
+              <ol id="paper-list"></ol>
+            </div>
+            <!-- End Data -->
+          </div>
+        </div>
+      </div>
+      <!-- End Data -->
+
+    </div>
+    <!-- End Content -->
+
+    <!-- Space (fixed height) -->
+    <div style="flex:0 0 50px">
+    </div>
+
+    <!-- Footer (fixed height) -->
+    <div style="flex:0 0 100px;background-color:#000">
+      <p style="width:100%;font-size:small;text-align:center">
+        <a target="_blank" href="http://neuroanatomy.github.io">
+          <img src="img/naat-bw.svg"
+            style="width:28px;height:28px;margin-right:4px;display:inline-block;vertical-align:middle" /></a>
+        <a target="_blank" href="http://neuroanatomy.github.io" class="linkNoULine">
+          groupe de neuroanatomie appliquée et théorique
+        </a>
+      </p>
+    </div>
+  </div>
+
+  <!-- Authentication -->
+  <script src="src/hello.polyfill.js"></script>
+  <script src="src/hello.js"></script>
+  <script src="src/modules/github.js"></script>
+  <!--<script src="https://npmcdn.com/parse/dist/parse.js"></script>-->
+
+  <!-- Parse -->
+  <script src="https://npmcdn.com/parse@1.9.2/dist/parse.js"></script>
+
+  <!-- Brainspell -->
+  <script type="module">
+  import * as login from "./src/login.js";
+  import * as search from "./search.js";
+
+  const init = async () => {
+    await login.init();
+    search.init();
+  };
+  init();
+  </script>
+
+
+</body>
+
+</html>
