@@ -96,6 +96,59 @@ async function start() {
   });
   const solrPort = await listen(solrServer);
 
+  // PubMed stub (efetch): answers pubmed.records[id] (XML text) or an empty set. pubmed.mode:
+  // 'ok' | 'error500'; pubmed.delayMs delays every answer. Used by addArticle (PUBMED_URL).
+  const pubmed = {records: {}, calls: [], mode: 'ok', delayMs: 0};
+  const pubmedServer = http.createServer((req, res) => {
+    const u = new URL(req.url, 'http://x');
+    pubmed.calls.push(Object.fromEntries(u.searchParams));
+    const answer = () => {
+      if (pubmed.mode === 'error500') {
+        res.writeHead(500);
+        res.end('boom');
+
+        return;
+      }
+      res.writeHead(200, {'content-type': 'text/xml'});
+      res.end(pubmed.records[u.searchParams.get('id')] || '<?xml version="1.0"?><PubmedArticleSet></PubmedArticleSet>');
+    };
+    if (pubmed.delayMs) {
+      setTimeout(answer, pubmed.delayMs);
+    } else {
+      answer();
+    }
+  });
+  const pubmedPort = await listen(pubmedServer);
+
+  // Solr update-handler stub (SOLR_UPDATE_URL): keeps the posted documents.
+  // solrUpdate.failures = number of requests to refuse with a 500 before accepting.
+  const solrUpdate = {docs: [], calls: 0, failures: 0};
+  const solrUpdateServer = http.createServer((req, res) => {
+    const chunks = [];
+    req.on('data', (c) => chunks.push(c));
+    req.on('end', () => {
+      solrUpdate.calls++;
+      if (solrUpdate.failures > 0) {
+        solrUpdate.failures--;
+        res.writeHead(500);
+        res.end('{}');
+
+        return;
+      }
+      try {
+        solrUpdate.docs.push(...JSON.parse(Buffer.concat(chunks).toString('utf8')));
+      } catch (e) {
+        res.writeHead(400);
+        res.end('{}');
+
+        return;
+      }
+      res.writeHead(200, {'content-type': 'application/json'});
+      res.end('{"responseHeader":{"status":0}}');
+    });
+  });
+  const solrUpdatePort = await listen(solrUpdateServer);
+
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'bs-it-'));
   const configPath = path.join(tmp, 'config.json');
   fs.writeFileSync(configPath, JSON.stringify({
@@ -119,7 +172,9 @@ async function start() {
     PORT: String(port),
     LIVEQUERY_PORT: String(lqPort),
     GITHUB_API_URL: `http://127.0.0.1:${githubPort}`,
-    SOLR_URL: `http://127.0.0.1:${solrPort}/solr/brainspell/select`
+    SOLR_URL: `http://127.0.0.1:${solrPort}/solr/brainspell/select`,
+    PUBMED_URL: `http://127.0.0.1:${pubmedPort}/entrez/eutils/efetch.fcgi`,
+    SOLR_UPDATE_URL: `http://127.0.0.1:${solrUpdatePort}/solr/brainspell/update?commit=true`
   });
   const child = spawn(process.execPath, ['app.js'], {cwd: serverDir, env, stdio: ['ignore', 'pipe', 'pipe']});
   let output = '';
@@ -134,7 +189,7 @@ async function start() {
   });
 
   const ctx = {
-    appId, masterKey, serverURL, dbName, accounts, githubCalls, solrCalls, serverDir,
+    appId, masterKey, serverURL, dbName, accounts, githubCalls, solrCalls, serverDir, pubmed, solrUpdate,
     serverOutput: () => output,
     // REST call. opts: {session, master, body}
     async rest(method, p, opts) {
@@ -168,7 +223,7 @@ async function start() {
     runScript(script, args) {
       return new Promise((resolve) => {
         execFile(process.execPath, [path.join(serverDir, 'scripts', script)].concat(args || []), {
-          env: Object.assign({}, process.env, {PARSE_URL: serverURL, PARSE_APP_ID: appId, PARSE_MASTER_KEY: masterKey}),
+          env: Object.assign({}, process.env, {PARSE_URL: serverURL, PARSE_APP_ID: appId, PARSE_MASTER_KEY: masterKey, SOLR_UPDATE_URL: env.SOLR_UPDATE_URL}),
           cwd: serverDir
         }, (err, stdout, stderr) => resolve({code: err ? err.code : 0, stdout, stderr}));
       });
@@ -178,6 +233,8 @@ async function start() {
       await new Promise((r) => (exited ? r() : child.on('exit', r)));
       await new Promise((r) => githubServer.close(r));
       await new Promise((r) => solrServer.close(r));
+      await new Promise((r) => pubmedServer.close(r));
+      await new Promise((r) => solrUpdateServer.close(r));
       try {
         const {MongoClient} = require('mongodb');
         const client = await MongoClient.connect(base, {useUnifiedTopology: true});

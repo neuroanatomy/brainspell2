@@ -20,7 +20,8 @@
     "parse-server": "^4.10.2",
     "request": "^2.88.0",
     "request-promise": "^4.2.2",
-    "translucent-viewer": "github:neuroanatomy/translucent-viewer"
+    "translucent-viewer": "github:neuroanatomy/translucent-viewer",
+    "xml2js": "^0.4.19"
   },
   "devDependencies": {
     "mongodb": "^3.6.11",
