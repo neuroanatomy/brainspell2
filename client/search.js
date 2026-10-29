@@ -1,6 +1,6 @@
 /* global Parse */
 import TranslucentCluster from "./node_modules/translucent-viewer/translucent-cluster.js";
-import {spinHint} from "./annotation/spin-hint.js";
+import {spinHint, softenRotation} from "./annotation/spin-hint.js";
 import * as login from "./src/login.js";
 import {el, setChildren, decoded} from "./annotation/dom.js";
 import {referenceNodes} from "./annotation/reference.js";
@@ -163,7 +163,8 @@ const _initTranslucentCluster = async () => {
   trc.createEmptyData([45, 54, 45]);
   trcReady = true;
   renderer.touch();
-  spinHint(trc.tr,document.getElementById('viewer'));
+  softenRotation(trc.tr);
+  spinHint(trc.tr, document.getElementById('viewer'));
 };
 
 const setupMap = () => {

@@ -60,3 +60,8 @@ export const spinHint = (tr, elem, period = 20000) => {
   };
   requestAnimationFrame(step);
 };
+
+/** The viewer sets TrackballControls.rotateSpeed to 10, which turns the brain too much for a small mouse movement. */
+export const softenRotation = (tr, factor = 0.5) => {
+  if (tr && tr.cameraControls) tr.cameraControls.rotateSpeed *= factor;
+};

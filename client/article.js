@@ -3,7 +3,7 @@ import * as session from "./annotation/session.js";
 import * as api from "./annotation/api.js";
 import {el, setChildren, decoded, decodedOnly} from "./annotation/dom.js";
 import {createContext, loginHint, describeError} from "./annotation/context.js";
-import {spinHint} from "./annotation/spin-hint.js";
+import {spinHint, softenRotation} from "./annotation/spin-hint.js";
 import {renderMesh, renderTableOk} from "./annotation/votes.js";
 import {renderTags} from "./annotation/tags.js";
 import {renderMeta} from "./annotation/meta.js";
@@ -37,7 +37,8 @@ let viewerFactory = async (elemId, locations) => {
     locations
   });
   await trl.init();
-  spinHint(trl.tr,document.getElementById(elemId));
+  softenRotation(trl.tr);
+  spinHint(trl.tr, document.getElementById(elemId));
 };
 
 /** For the table editor: (re)build a viewer in an element. Goes through the replaceable factory. */
