@@ -10,10 +10,20 @@ const MASTER = {useMasterKey: true};
 const REFRESH_EVERY_MS = 60 * 1000;
 const lastRefresh = new Map(); // userId -> time of the last successful GitHub check
 
+/**
+ * Canonical GitHub id: a JSON number that is a positive safe integer, or a string of 1 to 15
+ * digits without leading zero. Anything else (31.0 as "31.0", "031337", " 31337", "+31337") is
+ * refused, because Parse's own adapter compares ids loosely and would accept several spellings
+ * of one account as different users.
+ * @param {any} v Value of authData.github.id
+ * @returns {number|null} The id as a number, or null when not canonical
+ */
 function toGithubId(v) {
-  const n = typeof v === 'string' && /^[0-9]{1,15}$/.test(v) ? Number(v) : v;
+  if (typeof v === 'string') {
+    return /^[1-9][0-9]{0,14}$/.test(v) ? Number(v) : null;
+  }
 
-  return typeof n === 'number' && Number.isSafeInteger(n) && n > 0 ? n : null;
+  return typeof v === 'number' && Number.isSafeInteger(v) && v > 0 ? v : null;
 }
 
 /**
@@ -76,6 +86,13 @@ async function resolveProfile(user, refresh) {
     if (gh.id !== auth.id) {
       return fail(CODES.FORBIDDEN, 'GitHub account does not match the session');
     }
+    // one GitHub account, one Parse user: refuse a second Parse user claiming the same account
+    const others = new Parse.Query('UserProfile');
+    others.equalTo('githubId', auth.id);
+    others.notEqualTo('user', user.id);
+    if (await others.first(MASTER)) {
+      return fail(CODES.FORBIDDEN, 'This GitHub account is already used by another user');
+    }
     lastRefresh.set(user.id, Date.now());
     let profile = existing;
     if (!profile) {
@@ -126,4 +143,4 @@ function reset() {
   lastRefresh.clear();
 }
 
-module.exports = {requireGithubUser, refreshGithubUser, githubAuthOf, reset};
+module.exports = {toGithubId, requireGithubUser, refreshGithubUser, githubAuthOf, reset};

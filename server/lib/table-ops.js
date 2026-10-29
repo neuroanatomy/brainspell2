@@ -9,6 +9,9 @@ const MAX_ROWS = 5000;
 const MAX_TITLE = 1000;
 const MAX_CAPTION = 5000;
 const MAX_IMPORT_TEXT = 500000;
+const MAX_EXPERIMENTS = 200;
+const MAX_SPLITS = 20;
+const MAX_TOTAL_TEXT = 1000000;
 const COORD_LIMIT = 200;
 const NUMBER_RE = /[-+−]?(?:\d+(?:\.\d+)?|\.\d+)/g;
 
@@ -42,16 +45,19 @@ function formatLocation(xyz) {
   return xyz.map(formatNumber).join(',');
 }
 
-function checkXyz(v, name) {
-  if (!Array.isArray(v) || v.length !== 3) {
+function checkXyz(v, name, allowFourth) {
+  if (!Array.isArray(v) || !(v.length === 3 || (allowFourth && v.length === 4))) {
     return fail(CODES.VALIDATION, `${name}: must be an array of three numbers`);
   }
   v.forEach((n, i) => {
     if (typeof n !== 'number' || !Number.isFinite(n)) {
       fail(CODES.VALIDATION, `${name}[${i}]: must be a finite number`);
     }
-    if (n < -COORD_LIMIT || n > COORD_LIMIT) {
+    if (i < 3 && (n < -COORD_LIMIT || n > COORD_LIMIT)) {
       fail(CODES.VALIDATION, `${name}[${i}]: must be between -${COORD_LIMIT} and ${COORD_LIMIT}`);
+    }
+    if (i === 3 && Math.abs(n) > 1e6) {
+      fail(CODES.VALIDATION, `${name}[3]: out of range`);
     }
   });
 
@@ -72,7 +78,9 @@ function validateOps(ops) {
     return fail(CODES.VALIDATION, `ops: must have between 1 and ${MAX_OPS} operations`);
   }
 
-  return ops.map((raw, i) => {
+  let splits = 0;
+  let totalText = 0;
+  const checked = ops.map((raw, i) => {
     const name = `ops[${i}]`;
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
       return fail(CODES.VALIDATION, `${name}: must be an object`);
@@ -93,7 +101,7 @@ function validateOps(ops) {
       break;
     case 'updateRow':
       out.index = validate.int(raw.index, `${name}.index`, {min: 0, max: MAX_ROWS});
-      out.xyz = checkXyz(raw.xyz, `${name}.xyz`).slice();
+      out.xyz = checkXyz(raw.xyz, `${name}.xyz`, true).slice();
       break;
     case 'addRow':
       out.xyz = checkXyz(raw.xyz, `${name}.xyz`).slice();
@@ -103,14 +111,26 @@ function validateOps(ops) {
       break;
     case 'deleteRow':
     case 'split':
+      if (kind === 'split' && ++splits > MAX_SPLITS) {
+        fail(CODES.VALIDATION, `ops: at most ${MAX_SPLITS} split operations per call`);
+      }
       out.index = validate.int(raw.index, `${name}.index`, {min: 0, max: MAX_ROWS});
       break;
     default: // replaceFromText
       out.text = validate.str(raw.text, `${name}.text`, {max: MAX_IMPORT_TEXT, multiline: true});
     }
 
+    if (out.text !== undefined) {
+      totalText += out.text.length;
+      if (totalText > MAX_TOTAL_TEXT) {
+        fail(CODES.VALIDATION, `ops: the texts of one call add up to more than ${MAX_TOTAL_TEXT} characters`);
+      }
+    }
+
     return out;
   });
+
+  return checked;
 }
 
 /**
@@ -204,7 +224,10 @@ function applyOps(experiments, experimentId, rawOps) {
     case 'updateRow':
       checkIndex(op.index, rows.length, `${name}.index`, false);
       exp.locations = rows.slice();
-      exp.locations[op.index] = formatLocation(op.xyz);
+      // legacy rows may carry more than x,y,z (a z-score): a 3-number update keeps them
+      exp.locations[op.index] = op.xyz.length === 3 ?
+        [formatLocation(op.xyz)].concat(String(rows[op.index]).split(',').slice(3)).join(',') :
+        formatLocation(op.xyz);
       break;
     case 'addRow': {
       const at = op.index === undefined ? rows.length : op.index;
@@ -223,6 +246,9 @@ function applyOps(experiments, experimentId, rawOps) {
       break;
     case 'split': {
       checkIndex(op.index, rows.length, `${name}.index`, false);
+      if (state.length + created.length + 1 > MAX_EXPERIMENTS) {
+        fail(CODES.VALIDATION, `${name}: an article has at most ${MAX_EXPERIMENTS} experiments`);
+      }
       nextId += 1;
       created.unshift({id: nextId, title: exp.title === undefined ? '' : exp.title,
         caption: exp.caption === undefined ? '' : exp.caption, locations: rows.slice(op.index), tags: []});
@@ -247,5 +273,5 @@ function applyOps(experiments, experimentId, rawOps) {
 
 module.exports = {
   applyOps, validateOps, parseLocations, formatLocation, formatNumber, maxId,
-  MAX_OPS, MAX_ROWS, COORD_LIMIT
+  MAX_OPS, MAX_ROWS, COORD_LIMIT, MAX_EXPERIMENTS, MAX_SPLITS, MAX_TOTAL_TEXT
 };

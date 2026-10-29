@@ -78,7 +78,9 @@ test('a no-op changes nothing', () => {
 
 test('updateRow: rewrites a legacy 4-value row as three numbers; others untouched', () => {
   const r = apply(EXPS(), 1, [{op: 'updateRow', index: 2, xyz: [1.23456, -2, 0]}]);
-  assert.deepStrictEqual(r.experiments[0].locations, ['1,2,3', '4,5,6', '1.235,-2,0']);
+  assert.deepStrictEqual(r.experiments[0].locations, ['1,2,3', '4,5,6', '1.235,-2,0,0.5'], 'a 3-number update keeps the 4th value');
+  const r4 = apply(EXPS(), 1, [{op: 'updateRow', index: 2, xyz: [1, 2, 3, 9.5]}]);
+  assert.deepStrictEqual(r4.experiments[0].locations[2], '1,2,3,9.5', 'a 4-number update stores 4');
   const r2 = apply(EXPS(), 1, [{op: 'updateRow', index: 0, xyz: [9, 9, 9]}]);
   assert.deepStrictEqual(r2.experiments[0].locations, ['9,9,9', '4,5,6', '7,8,9,0.5'], 'legacy 4th value kept');
 });
@@ -91,7 +93,9 @@ test('updateRow validation', () => {
   bad({index: '1'});
   bad({index: undefined});
   bad({xyz: [1, 2]});
-  bad({xyz: [1, 2, 3, 4]});
+  bad({xyz: [1, 2, 3, 4, 5]});
+  bad({xyz: [1, 2, 3, 1e7]});
+  bad({xyz: [1, 2, 3, null]});
   bad({xyz: '1,2,3'});
   bad({xyz: [1, 2, '3']});
   bad({xyz: [1, 2, null]});
@@ -232,4 +236,19 @@ test('the experiment must exist', () => {
   code(() => apply(EXPS(), 99, [{op: 'setTitle', text: 'a'}]), 101);
   code(() => apply([], 1, [{op: 'setTitle', text: 'a'}]), 101);
   code(() => apply([null, {id: 1, locations: []}], 2, [{op: 'setTitle', text: 'a'}]), 101);
+});
+
+test('caps: 20 splits per call, 200 experiments per article, 1,000,000 characters of text per call', () => {
+  const many = Array.from({length: 21}, () => ({op: 'split', index: 0}));
+  const e = {id: 1, title: '', caption: '', locations: Array.from({length: 30}, (_, i) => `${i},0,0`), tags: []};
+  code(() => apply([e], 1, many), 142, /at most 20 split/);
+  assert.strictEqual(apply([e], 1, many.slice(0, 20).map((o, i) => ({op: 'split', index: 20 - i}))).experiments.length, 21);
+  const full = Array.from({length: 199}, (_, i) => ({id: i + 1, title: '', locations: ['1,1,1', '2,2,2'], tags: []}));
+  assert.strictEqual(apply(full, 1, [{op: 'split', index: 1}]).experiments.length, 200);
+  const full200 = full.concat([{id: 200, title: '', locations: ['1,1,1', '2,2,2'], tags: []}]);
+  code(() => apply(full200, 1, [{op: 'split', index: 1}]), 142, /at most 200 experiments/);
+  const text = 'x,1,1 '.repeat(1).padEnd(400000, ' ');
+  code(() => apply([e], 1, [{op: 'replaceFromText', text: '1,2,3'.padEnd(400000, ' ')}, {op: 'replaceFromText', text: '1,2,3'.padEnd(400000, ' ')},
+    {op: 'replaceFromText', text: '1,2,3'.padEnd(400000, ' ')}]), 142, /1000000 characters/);
+  assert.ok(text);
 });

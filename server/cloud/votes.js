@@ -8,10 +8,11 @@ var {withLock} = require('../lib/locks');
 var rateLimit = require('../lib/rate-limit');
 var {tagKey, cleanName} = require('../lib/normalize');
 var logic = require('../lib/votes-logic');
-var {findArticle, articleData, loadVoteRows, loadComments, MASTER} = require('../lib/articles');
+var {findArticle, articleData, loadVoteRows, loadComments, voteRow, MASTER} = require('../lib/articles');
 
 var CONCEPT_PAGE = 1000;
 var CONCEPT_MAX = 10000;
+var MAX_VOTES_PER_ARTICLE = 300;
 
 function newVote(user, login, pmid, fields) {
   var o = new Parse.Object('Vote');
@@ -29,7 +30,9 @@ async function myRows(user, pmid, kind, setup) {
   var q = new Parse.Query('Vote');
   q.equalTo('user', user.id);
   q.equalTo('pmid', pmid);
-  q.equalTo('kind', kind);
+  if (kind) {
+    q.equalTo('kind', kind);
+  }
   if (setup) {
     setup(q);
   }
@@ -125,12 +128,13 @@ Parse.Cloud.define('getAnnotations', async (request) => {
     stereo: stereo,
     nsubjects: logic.buildNSubjects(article, rows, userId),
     comments: com.comments,
-    commentCount: com.commentCount
+    commentCount: com.commentCount,
+    truncated: rows.truncated === true
   };
 });
 
 Parse.Cloud.define('vote', async (request) => {
-  var {user, login} = await requireGithubUser(request);
+  var {user, login, githubId} = await requireGithubUser(request);
   var p = validate.noUnknown(request.params, ['pmid', 'experimentId', 'kind', 'ontology', 'tag', 'value']);
   var pmid = validate.pmid(p.pmid);
   var kind = validate.oneOf(p.kind, 'kind', logic.VOTE_KINDS);
@@ -156,9 +160,9 @@ Parse.Cloud.define('vote', async (request) => {
       fail(CODES.VALIDATION, 'tag: must not be empty');
     }
   }
-  rateLimit.check(user.id, 'vote');
+  rateLimit.check(String(githubId), 'vote');
 
-  return withLock(`user:${user.id}`, async () => {
+  return withLock(`user:${githubId}`, async () => {
     var article = articleData(await findArticle(pmid));
     if (value !== 0) {
       if (kind !== 'mesh' && !findExperiment(article, experimentId)) {
@@ -175,6 +179,13 @@ Parse.Cloud.define('vote', async (request) => {
     })).filter((o) => typeof o.get('tag') === 'string' && tagKey(o.get('tag')) === key);
     var current = found[0] || null;
     var decision = logic.decide(current ? {value: current.get('value')} : null, value);
+    if (decision.op === 'create') {
+      var mine = await myRows(user, pmid, null);
+      var keys = new Set(mine.filter((o) => logic.VOTE_KINDS.includes(o.get('kind'))).map((o) => logic.rowKey(voteRow(o))));
+      if (keys.size >= MAX_VOTES_PER_ARTICLE) {
+        fail(CODES.VALIDATION, `value: at most ${MAX_VOTES_PER_ARTICLE} different votes per user and article`);
+      }
+    }
     await apply(decision, current, found.slice(1),
       () => newVote(user, login, pmid, {
         experimentId: experimentId, kind: kind, ontology: ontology, tag: tag, value: value, number: null
@@ -192,16 +203,16 @@ Parse.Cloud.define('vote', async (request) => {
 });
 
 Parse.Cloud.define('setStereoSpace', async (request) => {
-  var {user, login} = await requireGithubUser(request);
+  var {user, login, githubId} = await requireGithubUser(request);
   var p = validate.noUnknown(request.params, ['pmid', 'space']);
   var pmid = validate.pmid(p.pmid);
   if (p.space === undefined) {
     fail(CODES.VALIDATION, 'space: required (use null to retract)');
   }
   var space = p.space === null ? null : validate.oneOf(p.space, 'space', logic.SPACES);
-  rateLimit.check(user.id, 'vote');
+  rateLimit.check(String(githubId), 'vote');
 
-  return withLock(`user:${user.id}`, async () => {
+  return withLock(`user:${githubId}`, async () => {
     var article = articleData(await findArticle(pmid));
     var found = await myRows(user, pmid, 'space');
     var current = found[0] || null;
@@ -218,16 +229,16 @@ Parse.Cloud.define('setStereoSpace', async (request) => {
 });
 
 Parse.Cloud.define('setNSubjects', async (request) => {
-  var {user, login} = await requireGithubUser(request);
+  var {user, login, githubId} = await requireGithubUser(request);
   var p = validate.noUnknown(request.params, ['pmid', 'n']);
   var pmid = validate.pmid(p.pmid);
   if (p.n === undefined) {
     fail(CODES.VALIDATION, 'n: required (use null to retract)');
   }
   var n = p.n === null ? null : validate.int(p.n, 'n', {min: 1, max: 100000});
-  rateLimit.check(user.id, 'vote');
+  rateLimit.check(String(githubId), 'vote');
 
-  return withLock(`user:${user.id}`, async () => {
+  return withLock(`user:${githubId}`, async () => {
     var article = articleData(await findArticle(pmid));
     var found = await myRows(user, pmid, 'nsubjects');
     var current = found[0] || null;

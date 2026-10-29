@@ -54,7 +54,7 @@ const CLASSES = [
   },
   {
     className: 'Revision',
-    fields: {pmid: S, rev: N, user: S, login: S, ops: A, before: A},
+    fields: {pmid: S, rev: N, user: S, login: S, ops: A, before: A, applied: B},
     indexes: {pmid_1_rev_1: {pmid: 1, rev: 1}},
     classLevelPermissions: CLOSED
   },

@@ -11,7 +11,9 @@ const LIMITS = {
   postComment: [{ms: MIN, max: 5}, {ms: DAY, max: 20}],
   editExperiment: [{ms: MIN, max: 30}],
   addArticle: [{ms: HOUR, max: 5}],
-  saveCollection: [{ms: MIN, max: 30}]
+  saveCollection: [{ms: MIN, max: 30}],
+  // global (one key for everybody): the search is public
+  select: [{ms: 1000, max: 30}, {ms: MIN, max: 600}]
 };
 
 const hits = new Map(); // `${name}|${userId}` -> array of timestamps, oldest first

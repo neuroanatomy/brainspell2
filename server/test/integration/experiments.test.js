@@ -27,7 +27,7 @@ const code = (res, c, what) => {
 const where = (o) => encodeURIComponent(JSON.stringify(o));
 const article = async (ctx) => (await ctx.rest('GET', `/classes/Articles?where=${where({PMID: '808080'})}`, {master: true})).json.results[0];
 const revisions = async (ctx) => (await ctx.rest('GET', `/classes/Revision?where=${where({pmid: '808080'})}&order=rev`, {master: true})).json.results;
-const edit = (ctx, who, p) => ctx.cloud('editExperiment', Object.assign({pmid: '808080', experimentId: 1}, p), who.session);
+const edit = (ctx, who, p) => ctx.cloud('editExperiment', Object.assign({pmid: '808080', experimentId: 1, rev: 0}, p), who.session);
 
 test('editExperiment: setup (legacy-shaped article, users, a vote)', async (ctx) => {
   const art = await ctx.rest('POST', '/classes/Articles', {master: true, body: LEGACY});
@@ -43,7 +43,7 @@ test('editExperiment: setup (legacy-shaped article, users, a vote)', async (ctx)
 test('editExperiment: refusals (anonymous, unknown parameters, bad ops, unknown ids)', async (ctx) => {
   const {alice} = ctx.exp;
   const ops = [{op: 'setTitle', text: 'x'}];
-  code(await ctx.cloud('editExperiment', {pmid: '808080', experimentId: 1, ops}), 206, 'anonymous');
+  code(await ctx.cloud('editExperiment', {pmid: '808080', experimentId: 1, rev: 0, ops}), 206, 'anonymous');
   code(await edit(ctx, alice, {ops, login: 'bob'}), 142, 'login parameter');
   code(await edit(ctx, alice, {ops, user: 'bob'}), 142, 'user parameter');
   code(await edit(ctx, alice, {ops: []}), 142, 'no ops');
@@ -53,7 +53,7 @@ test('editExperiment: refusals (anonymous, unknown parameters, bad ops, unknown 
   code(await edit(ctx, alice, {ops: [{op: 'deleteRow', index: 99}]}), 142, 'row out of range');
   code(await edit(ctx, alice, {ops: [{op: 'replaceFromText', text: '300,0,0'}]}), 142, 'import out of range');
   code(await edit(ctx, alice, {experimentId: 99, ops}), 101, 'unknown experiment');
-  code(await ctx.cloud('editExperiment', {pmid: '999999', experimentId: 1, ops}, alice.session), 101, 'unknown article');
+  code(await ctx.cloud('editExperiment', {pmid: '999999', experimentId: 1, rev: 0, ops}, alice.session), 101, 'unknown article');
   assert.strictEqual((await revisions(ctx)).length, 0);
   assert.strictEqual((await article(ctx)).rev, undefined);
 });
@@ -93,13 +93,13 @@ test('editExperiment: edits a legacy article; tags, votes and untouched rows sur
   assert.ok(!revs[0].ACL || !revs[0].ACL['*'], `Revision has a public ACL: ${JSON.stringify(revs[0].ACL)}`);
 });
 
-test('editExperiment: conflicts (missing rev is 0, stale rev, message has the current rev)', async (ctx) => {
+test('editExperiment: conflicts (rev is required, stale rev, message has the current rev)', async (ctx) => {
   const {alice, bob} = ctx.exp;
   const ops = [{op: 'setCaption', text: 'late'}];
-  const missing = await edit(ctx, bob, {ops});
-  code(missing, 1001, 'missing rev');
-  assert.ok(/rev 1\b/.test(missing.json.error), missing.text);
-  code(await edit(ctx, bob, {ops, rev: 0}), 1001, 'stale rev');
+  code(await edit(ctx, bob, {ops, rev: undefined}), 142, 'missing rev');
+  const stale = await edit(ctx, bob, {ops, rev: 0});
+  code(stale, 1001, 'stale rev');
+  assert.ok(/rev 1\b/.test(stale.json.error), stale.text);
   code(await edit(ctx, bob, {ops, rev: '1'}), 142, 'rev as string');
   assert.strictEqual((await article(ctx)).Experiments[0].caption, 'caption 1');
   const out = ok(await edit(ctx, bob, {ops, rev: 1}), 'right rev');

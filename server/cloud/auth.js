@@ -2,7 +2,7 @@
 
 var {CODES, fail} = require('../lib/errors');
 var validate = require('../lib/validate');
-var {refreshGithubUser, githubAuthOf} = require('../lib/auth');
+var {refreshGithubUser, githubAuthOf, toGithubId} = require('../lib/auth');
 
 Parse.Cloud.define('me', async (request) => {
   validate.noUnknown(request.params, []);
@@ -19,13 +19,20 @@ Parse.Cloud.define('me', async (request) => {
 
 // Creation of a _User without GitHub authData is refused, for everybody, master key included.
 // Logging in with authData is a POST /users too, and carries authData.github.
-Parse.Cloud.beforeSave(Parse.User, (request) => {
+// The GitHub id must be canonical (lib/auth.js toGithubId) and must not belong to an existing user.
+Parse.Cloud.beforeSave(Parse.User, async (request) => {
   if (request.original) {
     return;
   }
   var authData = request.object.get('authData');
   var gh = authData && authData.github;
-  if (!gh || typeof gh !== 'object' || gh.id === undefined || gh.id === null || gh.id === '') {
+  var id = gh && typeof gh === 'object' ? toGithubId(gh.id) : null;
+  if (id === null) {
     fail(CODES.FORBIDDEN, 'Only GitHub users can be created');
+  }
+  var q = new Parse.Query(Parse.User);
+  q.containedIn('authData.github.id', [id, String(id)]);
+  if (await q.first({useMasterKey: true})) {
+    fail(CODES.FORBIDDEN, 'This GitHub account is already used by another user');
   }
 });

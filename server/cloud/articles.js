@@ -19,11 +19,11 @@ function emptyExperiments(n) {
 }
 
 Parse.Cloud.define('addArticle', async (request) => {
-  var {user} = await requireGithubUser(request);
+  var {user, githubId} = await requireGithubUser(request);
   var p = validate.noUnknown(request.params, ['pmid', 'nTables']);
   var pmid = validate.pmid(p.pmid);
   var nTables = validate.has(p, 'nTables') ? validate.int(p.nTables, 'nTables', {min: 0, max: 50}) : 1;
-  rateLimit.check(user.id, 'addArticle');
+  rateLimit.check(String(githubId), 'addArticle');
 
   return withLock(`pmid:${pmid}`, async () => {
     var q = new Parse.Query('Articles');

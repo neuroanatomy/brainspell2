@@ -152,8 +152,10 @@ function create() {
   ParseUser.className = '_User';
 
   const matches = (rec, conds) => conds.every((c) => {
-    const v = c.field === 'objectId' ? rec.id : rec.data[c.field];
+    const v = c.field === 'objectId' ? rec.id : c.field.split('.').reduce((o, k) => (o === undefined || o === null ? undefined : o[k]), rec.data);
     switch (c.op) {
+    case 'ne':
+      return v !== c.value;
     case 'eq':
       return c.value === null ? v === undefined || v === null : v === c.value;
     case 'in':
@@ -173,6 +175,11 @@ function create() {
     }
     equalTo(f, v) {
       this.conds.push({op: 'eq', field: f, value: v});
+
+      return this;
+    }
+    notEqualTo(f, v) {
+      this.conds.push({op: 'ne', field: f, value: v});
 
       return this;
     }

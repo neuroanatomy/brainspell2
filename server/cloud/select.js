@@ -3,6 +3,7 @@
 var request = require('request-promise');
 var {fail, CODES} = require('../lib/errors');
 var validate = require('../lib/validate');
+var rateLimit = require('../lib/rate-limit');
 
 var ALLOWED = ['q', 'fl', 'defType', 'qf', 'start', 'rows', 'q.op'];
 var QF = ['Abstract Title', 'Title', 'Abstract', 'Authors'];
@@ -19,7 +20,7 @@ function solrURL() {
 function clean(params) {
   var p = validate.noUnknown(params, ALLOWED);
   var q = validate.str(p.q, 'q', {min: 1, max: 1000});
-  if (q.indexOf('{!') !== -1 || /_query_/i.test(q) || /\$\{/.test(q)) {
+  if (q.indexOf('{!') !== -1 || /_query_|_val_/i.test(q) || /\$\{/.test(q)) {
     fail(CODES.VALIDATION, 'q: local parameters and nested queries are not allowed');
   }
   var qs = {q: q};
@@ -41,6 +42,7 @@ function clean(params) {
 
 Parse.Cloud.define('select', async (req) => {
   var qs = clean(req.params);
+  rateLimit.check('global', 'select');
   var res;
   try {
     res = await request({url: solrURL(), qs: qs, timeout: 15000});

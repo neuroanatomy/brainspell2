@@ -4,7 +4,7 @@ const {fail, CODES} = require('./errors');
 
 const MASTER = {useMasterKey: true};
 const PAGE = 1000;
-const VOTE_CAP = 5000;
+const VOTE_CAP = 20000;
 
 /**
  * Find an article by PMID.
@@ -62,7 +62,7 @@ function voteRow(o) {
 }
 
 /**
- * Read the Vote rows of an article, newest first, capped at 5000.
+ * Read the Vote rows of an article, newest first, capped at 20000 (rows.truncated says whether it was hit).
  * @param {string} pmid Validated PMID
  * @returns {Promise<Object[]>} Plain rows
  */
@@ -80,6 +80,13 @@ async function loadVoteRows(pmid) {
     if (page.length < PAGE) {
       break;
     }
+  }
+  // `truncated` tells the caller that more than VOTE_CAP rows exist (counts are then incomplete)
+  rows.truncated = false;
+  if (rows.length >= VOTE_CAP) {
+    const c = new Parse.Query('Vote');
+    c.equalTo('pmid', pmid);
+    rows.truncated = await c.count(MASTER) > VOTE_CAP;
   }
 
   return rows;
