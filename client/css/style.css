@@ -61,6 +61,19 @@ a {
 #MyLogin {
   display: inline-block;
   margin-left: 15px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+#MyLogin.in {
+  text-decoration: none;
+  cursor: default;
+}
+
+#MyLogin.in a {
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .icon {

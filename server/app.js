@@ -30,6 +30,7 @@ app.get('/', (req, res) => {
     parseAppId: config.parseConfig.appId
   });
 });
+app.use('/parse/proxy', oauthshim);
 app.use('/parse', api);
 app.use('/proxy', oauthshim);
 app.listen(1337, function() {
