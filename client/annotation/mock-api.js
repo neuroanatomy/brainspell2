@@ -39,6 +39,7 @@ export const sampleArticles = () => ({
     Title: "Sample &lt;i&gt;mock&lt;/i&gt; article about working memory &amp; attention",
     Authors: "Smith J,Doe A,Roe B",
     Reference: "Mock J Neurosci 2020; 1:1-10",
+    DOI: "10.1000/mock.12345",
     Abstract: "This abstract has an entity &lt;b&gt;not bold&lt;/b&gt; and <script>window.__xss = 1</script> markup that must stay inert.",
     Metadata: {
       meshHeadings: [

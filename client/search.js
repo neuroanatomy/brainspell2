@@ -2,6 +2,7 @@
 import TranslucentCluster from "./node_modules/translucent-viewer/translucent-cluster.js";
 import * as login from "./src/login.js";
 import {el, setChildren, decoded} from "./annotation/dom.js";
+import {referenceNodes} from "./annotation/reference.js";
 import {mountSearchSelection, selectSlot, initHeaderLink} from "./annotation/collections.js";
 
 const params = new URLSearchParams(location.search);
@@ -71,12 +72,12 @@ const displayMoreArticles = () => {
 
   const list = document.getElementById("paper-list");
   for(let i=0; i<narticles; i++) {
-    const {pmid, title, reference, score} = searchResults[articlesDisplayed + i];
+    const {pmid, title, reference, doi, score} = searchResults[articlesDisplayed + i];
     list.appendChild(el("li", {dataset: {pmid: String(pmid)}},
       selectSlot(),
       el("span", {class: "title"}, el("a", {href: `/article.html?pmid=${encodeURIComponent(pmid)}`}, decoded(title))),
       " ",
-      el("span", {class: "reference"}, decoded(reference)),
+      el("span", {class: "reference"}, referenceNodes(reference, doi)),
       " ",
       el("span", {class: "score"}, `(${Number(score) || 0}%)`)));
   }
@@ -111,6 +112,7 @@ const queryArticlesSlice = async (res) => {
       pmid: a.get("PMID"),
       title: a.get("Title"),
       reference: a.get("Reference"),
+      doi: a.get("DOI"),
       score: (100*res.docs[i].score/res.maxScore)|0
     };
   }));

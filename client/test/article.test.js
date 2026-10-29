@@ -54,7 +54,14 @@ test("article page: database content is only ever text (no script/img elements)"
   const t = root.textContent;
   assert.ok(t.includes("Sample <i>mock</i> article about working memory & attention"), "entities decoded once, shown as text");
   assert.equal(root.byTag("i").length, 0);
-  assert.ok(t.includes("Smith J, Doe A, Roe B Mock J Neurosci 2020"));
+  assert.ok(t.includes("Smith J, Doe A, Roe B"));
+  assert.ok(t.includes("Mock J Neurosci 2020; 1:1-10"));
+  assert.equal(root.findClass("article-authors")[0].textContent, "Smith J, Doe A, Roe B");
+  assert.equal(root.findClass("article-citation")[0].textContent, "Mock J Neurosci 2020; 1:1-10", "line 2: the citation, authors once");
+  const doiLinks = root.byTag("a").filter((x) => String(x.getAttribute("href")).startsWith("https://doi.org/"));
+  assert.equal(doiLinks.length, 1, "the reference is a DOI link");
+  assert.equal(doiLinks[0].getAttribute("href"), "https://doi.org/10.1000/mock.12345");
+  assert.equal(doiLinks[0].getAttribute("rel"), "noopener noreferrer");
   assert.ok(t.includes("not bold"));
   assert.ok(!t.includes("window.__xss"), "script content removed from the abstract");
   assert.ok(t.includes("<img src=x onerror=alert(1)>"), "hostile MeSH name shown literally as text");

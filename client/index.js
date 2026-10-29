@@ -1,6 +1,7 @@
 /* global Parse */
 import * as login from "./src/login.js";
 import {el, setChildren, decoded} from "./annotation/dom.js";
+import {referenceNodes} from "./annotation/reference.js";
 import {initHeaderLink} from "./annotation/collections.js";
 
 let count;
@@ -41,7 +42,7 @@ const getRandomArticles = async () => {
       el("span", {class: "title"},
         el("a", {href: `/article.html?pmid=${encodeURIComponent(res.get("PMID"))}`}, decoded(res.get('Title')))),
       " ",
-      el("span", {class: "reference"}, decoded(res.get('Reference')))));
+      el("span", {class: "reference"}, referenceNodes(res.get('Reference'), res.get('DOI')))));
   }
 };
 

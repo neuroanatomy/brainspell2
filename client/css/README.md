@@ -120,3 +120,10 @@ were compared, then the page scripts were grepped for ids and classes they use. 
 | inline styles of `index/search/article/collections.html` (39) and the `<style>` of `search.html` | named classes in `layout.css` (`.page*`, `.search-box`, `svg.backdrop-svg` ...) | kept; the search backdrop now has `z-index: var(--z-backdrop)` |
 | `body`/`html` `-moz-font-smoothing`, `-webkit-transition` prefixes | -- | intentionally removed (obsolete) |
 | ids/classes used by page scripts without CSS (`#level`, `#levelValue`, `#num-found`, `#num-articles`, `#paper-list`, `#selection-toolbar`, `#collections`, `#query-result`, `#data`) | none ever had CSS or are styled through their children | checked |
+
+## References and DOI links
+
+`annotation/reference.js` turns the stored reference ("Authors (YEAR) Journal vol(issue):pages") and the article's `DOI` into text plus one link
+(`https://doi.org/<DOI>`, validated with `10.\d{4,9}/\S+`, percent-encoded, `target=_blank rel="noopener noreferrer"`). The article page shows the authors once (from `Authors`)
+and the citation from the year on as a second muted line; lists (search, home) keep the one-line reference with the journal part linked. A missing or placeholder
+DOI gives plain text. The class `.ref-link` is a normal link (no extra style).

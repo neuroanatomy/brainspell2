@@ -163,6 +163,10 @@ img.button.icon-sm {
   margin-top: var(--space-6);
 }
 
+.article-citation {
+  margin: var(--space-1) 0 var(--space-2);
+}
+
 .experiment {
   margin-top: var(--space-5);
   padding-top: var(--space-3);
