@@ -1,62 +1,71 @@
-# Manual tests: table editing, import, add article (WP5)
+# Manual tests: table editing, import, add article
 
-No browser was available when this was written; nothing below has been run in a browser. Serve `client/`
-(`cd client && python3 -m http.server 8000`) and use `http://localhost:8000/article.html?pmid=12345&mock=1&as=alice`
-(mock; the data lives in memory and a reload resets it). Part D repeats the key steps against a real server.
-Keep the console open: a Content-Security-Policy violation shows in red. Mock parameters: `latency=1500` makes the
-"Saving..." state visible; `fail=155` / `fail=142` make every write fail with that code. Fixture 12345: experiment 1 has
-5 rows, experiment 2 has 2 rows, experiment 3 is empty.
+Steps marked **(RISK)** are the likeliest to break and cannot be covered by unit tests. Serve `client/` (`cd client && python3 -m http.server 8000`)
+and open `http://localhost:8000/article.html?pmid=12345&mock=1&as=alice` (mock; data lives in memory, a reload resets it). Part D repeats the key
+steps against a real server. Keep the console open: no "Refused to ..." CSP message should appear (there are no inline styles any more). Mock
+parameters: `latency=1500` makes the "Saving…" state visible; `fail=155` / `fail=142` make every write fail with that code; `theme=light`.
+Fixture 12345: experiment 0 has 5 rows, experiment 1 has 2 rows, experiment 2 is empty.
 
-## UI round (read first): what changed in the steps below
-
-* Title and caption are edited **in place**: click the text or the small pencil button (labelled "Edit title" / "Edit caption") next to it; Enter saves a title (Ctrl+Enter a caption), Esc or Cancel restores the text.
-* Per-row buttons are round icon buttons ("+" = "Add row after this row", "−" = "Delete this row"); they appear when the row is hovered, focused or selected, and are always visible on touch screens. The header has one "+" ("Add row"). While a row is edited, ✓ saves and ✕ cancels it (Enter / Esc also work).
-* "Import from text" and "Split here" are in a toolbar **below** the table. "Split here" is disabled (its tooltip says why) until a row after the first is selected.
-* The table is as tall as its rows (scrolls above 420px); the viewer and the table are side by side from 900px of window width and stacked below it.
+What the editor looks like (logged in): under the title there is a small **pencil icon** (✎, "Edit title") and one next to the caption
+("Edit caption"). Beside the 3D viewer the coordinate table has columns X Y Z and, in the header, a round **"+" (Add row)**; each row has a round
+**"+" (Add row after this row)** and a round **"−" (Delete this row)** that appear when the row is hovered, focused or selected (always visible on
+touch screens). Below the table a toolbar holds the secondary buttons **Import from text** and **Split here**. Click a row to select it and edit
+its three numbers (✓ saves, ✕ cancels, Enter / Tab on Z saves, Esc cancels).
 
 ## A. Anonymous (`?pmid=12345&mock=1`)
 
 | # | Step | Expected |
 |---|---|---|
-| A1 | Open the page. | Tables, viewers, read-only as before. No "Edit title", "Import", "+", "-", "Split" anywhere. No "My collections" link in the header. |
+| A1 | Open the page. | Tables and viewers read-only: no pencil, no "+", "−", Import or Split anywhere. Clicking the title or a row does nothing. |
 | A2 | `?pmid=555&mock=1`. | "Article 555 is not in the database." and "This article is not in the database yet. Log in to add it." No form. |
 
 ## B. Logged in (`as=alice`)
 
 | # | Step | Expected |
 |---|---|---|
-| B1 | Open the page. | Header shows "My collections" (links to collections.html). Each experiment (also the empty one) has the buttons Edit title, Edit caption, Import from text (Split here only with 2+ rows) and an editable table with X Y Z and "+" / "-". The old read-only table is hidden; the 3D viewer is still shown. |
-| B2 | Click a coordinate row of experiment 1. | Row is highlighted and its cells become 3 inputs with Save/Cancel; the first input has focus. "Split here" becomes enabled. |
-| B3 | Type `abc` in X, press Enter. | Message "Not accepted: x must be a number". Nothing changes. Type `250` in Y: "y must be between -200 and 200". |
-| B4 | Type `1.23456`, `-5`, `6` and press Enter (or Tab from Z). Use `latency=1500` once. | While waiting: "Saving...", the table still shows the OLD value (no optimistic update). Then the row shows `1.235, -5, 6` and the viewer is redrawn with the sphere moved. |
-| B5 | Edit a row and press Escape. | Row returns to its previous values, nothing sent. Editing without changing a value and pressing Enter sends nothing. |
-| B6 | Click "+" on a row. | A new input row appears after it. Fill `9 8 7`, Enter: row inserted at that position; viewer has one more sphere. |
-| B7 | Click "+" in the header. | New row at the end. |
-| B8 | Click "-" on a row. | Row removed at once (no confirmation), viewer updated. |
-| B9 | Experiment 2 (2 rows): delete both. | The second delete asks "Delete the last row? ..."; Cancel keeps it; OK leaves the empty prompt "This table has no coordinates." with "Add row" and "Import from text". |
-| B10 | Empty experiment 3: "Add row", fill `3 4 5`, Enter. | Row appears and a 3D viewer is created next to the table. |
-| B11 | Experiment 1: "Split here" with no row selected. | Button is disabled. Click row 3, then "Split here", cancel the confirm: nothing happens. Again, confirm: the page reloads and shows one more experiment: rows 3.. in the new one (same title and caption, no tags), the first keeps rows 1-2 and its tags. The first row cannot be a split point. |
-| B12 | Edit title: type `New <b>title</b>`, Save. | Shown literally as text (no bold). 1001+ characters are refused before sending; same for a caption over 5000. Escape cancels. |
-| B13 | Import from text: paste `x=-5.5; y: 2; z=3` / `bad line` / `1 2` / `10,20,30`, Preview. | "2 locations will replace the table", a table with line numbers, and the skipped lines "line 2: bad line", "line 3: 1 2". |
-| B14 | Replace the text with `300,0,0`, Preview. | Error naming "line 1"; "Replace table" is disabled. |
-| B15 | Valid text, Preview, edit the text, press "Replace table". | It does not send; it previews again. After a new Preview, "Replace table" replaces the rows and closes the dialog. |
-| B16 | Do two edits in a row (e.g. B4 then B6). | Both succeed (the page tracks the new rev). No "changed meanwhile" message. |
-| B17 | `fail=155`: edit a row. | "Too many actions, please wait. ..." next to the controls; table unchanged. `fail=142`: "Not accepted: ...". |
-| B18 | Log out (header). | Editing controls disappear at once; the read-only table is back. |
-| B19 | Title `Faces<Houses contrast` and caption `A &amp; B`, Save; reload the page; open Edit title. | Shown exactly as typed, before and after the reload; the edit box starts with the same text. |
-| B20 | Import the same rows twice in a row. | The second time nothing visibly happens (the server reports no change), no reload, the dialog closes. |
-| B21 | With a legacy 4-value row (real data), look at the table. | Header "Extra" appears only for tables having such a row; the row has 3 inputs when edited, the extra value stays. |
-| B22 | `?pmid=12345&mock=1&as=alice` with the server not answering for 30 s (real server, network blocked). | After 30 s "The server did not answer. Please try again." |
+| B1 | Open the page. | Header shows "My collections". Every experiment (also the empty one) has pencil icons next to title and caption, an editable table with the round header "+", and the toolbar below it (the empty one has "Add row" and "Import from text" in its prompt). The old read-only table is replaced by the editable one. **The 3D viewer is on the left of the table** at 900 px window width or more, and the table is only as tall as its rows (no big empty box). |
+| B2 | Hover a row with the mouse (**RISK**). | The row's round "+" and "−" appear (fade in) and the row is shaded; they vanish when you leave (unless the row is selected). Tab into the row: they appear too. |
+| B3 | Click a coordinate row of experiment 0. | Row highlighted, its cells become three inputs with ✓ and ✕ icons; the first input has focus. "Split here" becomes enabled. |
+| B4 | Type `abc` in X, Enter. | "Not accepted: x must be a number". Nothing changes. `250` in Y: "y must be between -200 and 200". |
+| B5 | Type `1.23456`, `-5`, `6` and Enter (or Tab from Z). Use `latency=1500` once. | While waiting "Saving…" and the table still shows the OLD value (no optimistic update); then the row shows `1.235, -5, 6`. |
+| B6 | Edit a row and press Esc or click ✕. | Previous values back, nothing sent. Pressing Enter without changing anything sends nothing. |
+| B7 | Click the round "+" on a row. | A new input row appears after it (green tint). Fill `9 8 7`, Enter: row inserted there. |
+| B8 | Click the header "+". | New row at the end. |
+| B9 | Click "−" on a row. | Row removed at once (no confirmation). |
+| B10 | Experiment 1: delete both rows. | The second delete asks "Delete the last row? ..."; Cancel keeps it; OK leaves the empty prompt "This table has no coordinates." with "Add row" and "Import from text". |
+| B11 | Empty experiment 2: "Add row", fill `3 4 5`, Enter. | Row appears and a 3D viewer is created next to the table. |
+| B12 | Experiment 0: hover "Split here" before selecting a row. | It is disabled and its tooltip says to select a row after the first. Select the 3rd row, "Split here", Cancel the confirm: nothing. Again and OK: the page reloads with one more experiment (rows 3.. in the new one, same title and caption, no tags); the first keeps rows 1-2 and its tags. The first row can never be the split point. |
+| B13 | Title: click the pencil (or the title text). | The title becomes an input (focused) with Save / Cancel and a hint "plain text, at most 1000 characters". Type `New <b>title</b>`, Enter: shown literally as text. Esc or Cancel on another edit restores the text. A caption: pencil, Enter adds a line, Ctrl+Enter or Save saves; over 5000 characters is refused before sending. |
+| B14 | Title `Faces<Houses contrast`, caption `A &amp; B`; save; reload; open the pencil again. | Shown exactly as typed before and after the reload; the edit box starts with the same text. |
+| B15 | "Import from text": paste `x=-5.5; y: 2; z=3` / `bad line` / `1 2` / `10,20,30`, Preview. | "2 locations will replace the table", a table with line numbers, skipped lines "line 2: bad line", "line 3: 1 2". |
+| B16 | Text `300,0,0`, Preview. | Error naming "line 1"; "Replace table" disabled. |
+| B17 | Valid text, Preview, change the text, press "Replace table". | It does not send; it previews again. After a new Preview "Replace table" replaces the rows and the dialog closes. Importing the same rows again changes nothing visible, no reload. |
+| B18 | Two edits in a row (e.g. B5 then B7). | Both succeed; no "changed meanwhile". |
+| B19 | `fail=155`, edit a row; `fail=142`. | "Too many actions, please wait. ..." / "Not accepted: ..." next to the controls; table unchanged. |
+| B20 | Log out (header). | Pencils, row icons and toolbar disappear at once; the read-only table is back. Log in: they return. |
+| B21 | A table with a legacy 4-value row (real data). | Header "Extra" only for tables with such a row; the row has 3 inputs, the extra value stays after an edit. |
+| B22 | Real server not answering for 30 s. | "The server did not answer. Please try again." |
 
 ## C. Add article (`?pmid=555&mock=1&as=alice`)
 
 | # | Step | Expected |
 |---|---|---|
-| C1 | Open the page. | Form with PMID 555 (read-only) and "Number of stereotaxic tables" = 1. |
+| C1 | Open the page. | Form with PMID 555 (read-only) and "Number of stereotaxic tables" = 1; dark inputs, readable. |
 | C2 | Set 51, or `abc`, click "Add article". | "the number of tables must be a whole number between 0 and 50"; nothing sent. |
-| C3 | Set 3, click (use `latency=1500`). | "Saving..." and the button is disabled; then the page reloads and shows the article with 3 empty tables (each with the add-row / import prompt). |
-| C5 | Real server with Solr down (or mock with indexed=false). | After adding: "Article added, but search indexing is pending; ..." with an OK button; the page reloads on OK or after 4 s. |
-| C4 | `fail=155`, `fail=142`. | The error message appears next to the button; the form stays usable. |
+| C3 | Set 3, click (`latency=1500`). | "Saving..." and the button disabled; then the page reloads with 3 empty tables (each with the add-row / import prompt). |
+| C4 | `fail=155`, `fail=142`. | The error appears next to the button; the form stays usable. |
+| C5 | Real server with Solr down (or mock with indexed=false). | "Article added, but search indexing is pending; ..." with OK; the page reloads on OK or after 4 s. |
+
+## H. Things only a human can check
+
+| # | Step | Expected |
+|---|---|---|
+| H1 **(RISK)** | Touch device (or browser touch emulation). | Row "+" and "−" are always visible and at least about 36 px wide; chips, pencils and Save buttons are easy to hit; no hover is needed anywhere. |
+| H2 **(RISK)** | Narrow window (about 390 px). | The viewer is above the table; the table scrolls inside its box if tall; the toolbar buttons wrap; the editing row (three inputs and ✓ ✕) fits without cutting off. |
+| H3 | Keyboard only. | Tab reaches the pencils, rows (focus shows the row buttons), the header "+", Import and Split; Enter / Esc work in all inputs and the import dialog; focus is visible. |
+| H4 | `?theme=light`. | Light theme: table header tan, selected row pale orange, icons visible; same layout. |
+| H5 | Firefox, Safari, Chrome. | Same layout and behaviour; the editing inputs are not clipped. |
+| H6 (real WebGL) | Edit a coordinate with the viewer visible. | The viewer is redrawn with the changed peak (it is rebuilt each time; many edits create many WebGL contexts, the browser may warn after about 16: report it). |
 
 ## D. Against a real server (needs a logged-in GitHub user; riskiest steps first)
 
@@ -71,10 +80,7 @@ Keep the console open: a Content-Security-Policy violation shows in red. Mock pa
 | D7 | After D6, search for the new article. | It is found (Solr indexed) or `indexed:false` was stored (see server logs). |
 | D8 | Reload, log out in another tab, edit. | Session-expired message; controls disappear. |
 
-## Not testable without a browser (not verified by the unit tests)
+## Not covered by any automatic test
 
-* Real focus and Tab/Enter/Escape behaviour of the inputs, `maxlength`, `ev.stopPropagation` on the row buttons (the fake DOM has no bubbling).
-* The CSS (layout of the editor next to the viewer, hiding the read-only table, dialog look, `[hidden]`).
-* Rebuilding the TranslucentLocations viewer: the library has no update API, the editor clears the element and creates a new viewer, which creates a new WebGL context each time (old contexts are released only by garbage collection). Row-to-sphere highlighting is not implemented (the library has no support for it).
-* `window.confirm` dialogs; the CSP (no inline script or handler was added); `DOMParser` entity decoding of legacy titles shown in the title inputs.
-* The "My collections" link and the interplay with the collections page.
+* Real focus, hover and Tab order, `ev.stopPropagation` on row buttons (the fake DOM has no bubbling), `window.confirm` dialogs, real CSS rendering.
+* The 3D viewer rebuild (no update API in the library) and highlighting a clicked row in the viewer (not implemented).

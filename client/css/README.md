@@ -27,6 +27,15 @@ default (dark). Without a parameter the remembered choice is used.
 * The contrast of the colour tokens is computed for both themes: text pairs >= 4.5:1, UI parts (control borders, focus ring,
   vote colours) >= 3:1. `CSS_REPORT=1 node --test test/css-architecture.test.js` prints every ratio.
 
+* No page contains a `style=` attribute, a `<style>` element or a colour literal in inline SVG (use a class; see `.backdrop-a` in `layout.css`),
+  and no script writes a style attribute (`setAttribute("style")`, `style:` in `el()`). Setting `element.style.x` from JavaScript is fine.
+* Consequence: the CSP of the four pages has **no `'unsafe-inline'` in `style-src`** (`style-src 'self' https://fonts.googleapis.com`). It was
+  verified in Chrome and Firefox (articles anonymous and logged in, both themes, collections, home, search; the 3D viewer renders in Firefox) with no
+  violation reported. If a future third-party script needs inline styles, the browser console says "Applying inline style violates ..."; either fix the
+  cause or re-add `'unsafe-inline'` for that page and document the script here. Currently none needs it.
+* The header logo and icons are white SVGs: `--filter-header-icon` (`none` in dark, `invert(0.7)` in light, giving #4d4d4d = 7.25:1 on the cream bar)
+  makes them follow the theme; the test computes this ratio.
+
 Run it with `cd client && node --test test/css-architecture.test.js`.
 
 ## Naming

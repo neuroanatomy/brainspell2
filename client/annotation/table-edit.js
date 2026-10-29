@@ -240,7 +240,7 @@ export const createEditor = (deps) => {
       return;
     }
     if (!host) {
-      host = el("div", {id: `viewer-te-${ex.id}`, class: "te-own-viewer", style: "width:480px;height:480px; border:1px solid #111"});
+      host = el("div", {id: `viewer-te-${ex.id}`, class: "exp-viewer te-own-viewer"});
       ownViewer = host;
       setChildren(viewerSlot, host);
     }

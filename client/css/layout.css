@@ -73,6 +73,67 @@ img#logo {
   filter: var(--filter-header-icon);
 }
 
+/* ---- page frame: header slot, main, gap, footer (replaces the inline styles of the pages) ------------ */
+.page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-top {
+  flex: 0 0 var(--page-top-space);
+  z-index: var(--z-header);
+}
+
+.page-top-compact {
+  flex-basis: var(--page-top-space-compact);
+}
+
+.page-main {
+  flex: 1 0 auto;
+}
+
+.page-gap {
+  flex: 0 0 var(--page-gap);
+}
+
+.page-below-menu {
+  padding-top: var(--page-top-space-compact);
+}
+
+#content {
+  display: flex;
+  justify-content: center;
+}
+
+.link-plain {
+  text-decoration: none;
+}
+
+img.button.icon-sm {
+  width: var(--icon-size-sm);
+  height: var(--icon-size-sm);
+}
+
+.site-footer {
+  flex: 0 0 var(--footer-height);
+}
+
+.site-footer p {
+  width: 100%;
+  text-align: center;
+  font-size: var(--font-size-xs);
+}
+
+.site-footer img {
+  width: var(--icon-size-lg);
+  height: var(--icon-size-lg);
+  margin-right: var(--space-1);
+  display: inline-block;
+  vertical-align: middle;
+}
+
 /* ---- article page --------------------------------------------------------------------------------- */
 #article {
   width: min(100% - 2 * var(--space-4), var(--content-max-width));
@@ -187,8 +248,47 @@ img#logo {
   z-index: -1;
 }
 
+.content h2 {
+  margin-top: 0;
+}
+
+.content p {
+  margin-bottom: var(--space-6);
+}
+
+.search-box {
+  position: relative;
+  text-align: center;
+}
+
+.search-count {
+  text-align: right;
+}
+
 input#url,
 input#projectName {
-  width: calc(100% - var(--space-2));
+  display: block;
+  width: 100%;
   height: var(--space-6);
+  margin-bottom: var(--space-4);
+}
+
+/* decorative blurred backdrop of the search page: its two shapes take their colours from the theme */
+svg.backdrop-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  filter: blur(100px);
+}
+
+.backdrop-a {
+  fill: var(--color-bg);
+}
+
+.backdrop-b {
+  fill: var(--color-surface);
 }
