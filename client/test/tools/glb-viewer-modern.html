@@ -1,0 +1,31 @@
+<!doctype html>
+<!-- Reference viewer with a CURRENT three.js (r160, ES modules from jsdelivr): honours vertex-colour alpha like spec-compliant viewers (Blender, Sketchfab,
+     model-viewer). A test tool, not part of the site. Same parameters as glb-viewer.html. -->
+<html><head><meta charset="utf-8"><title>glb viewer (modern three.js)</title>
+<script type="importmap">{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head><body style="margin:0"><div id="v" style="width:800px;height:800px"></div>
+<script type="module">
+import * as THREE from "three";
+import {GLTFLoader} from "three/addons/loaders/GLTFLoader.js";
+const p = new URLSearchParams(location.search);
+const view = p.get("view") || "front";
+const dark = p.get("bg") !== "white";
+const renderer = new THREE.WebGLRenderer({antialias: true, preserveDrawingBuffer: true});
+renderer.setSize(800, 800);
+renderer.setClearColor(dark ? 0x111111 : 0xffffff, 1);
+document.getElementById("v").appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(30, 1, 0.01, 10);
+const D = 0.5;
+camera.position.set(...{front: [0, 0, D], top: [0, D, 0], side: [-D, 0, 0], iso: [-0.4, 0.4, 0.5]}[view]);
+camera.up.set(...(view === "top" ? [0, 0, 1] : [0, 1, 0]));
+camera.lookAt(0, 0, 0);
+new GLTFLoader().load(p.get("model"), (gltf) => {
+  scene.add(gltf.scene);
+  const info = [];
+  gltf.scene.traverse((o) => { if (o.isMesh) { info.push(o.name + " " + o.geometry.attributes.position.count + " " + o.material.type + " transparent=" + o.material.transparent + " opacity=" + o.material.opacity + " vertexColors=" + o.material.vertexColors + " alphaColor=" + (o.geometry.attributes.color ? o.geometry.attributes.color.itemSize : "-")); } });
+  window.__info = info;
+  renderer.render(scene, camera);
+  requestAnimationFrame(() => { renderer.render(scene, camera); window.__ready = true; });
+}, undefined, (e) => { window.__error = String(e && e.message || e); });
+</script></body></html>

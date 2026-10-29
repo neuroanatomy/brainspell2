@@ -253,14 +253,21 @@ const exportModel = async (query) => {
 
 const enableExport = (query) => {
   const button = document.getElementById("export-glb");
-  if (!button) {
+  if (!button || acc.papers === 0) {
     return;
   }
-  if (acc.papers > 0) {
-    button.disabled = false;
-    button.title = "Download the map as a 3D model (glb)";
-    button.onclick = () => exportModel(query);
-  }
+  button.onclick = () => exportModel(query);
+  // the map can be complete before the viewer has loaded the brain (a short search): wait for it, then enable the button
+  const check = (tries) => {
+    if (brainGeometry()) {
+      button.disabled = false;
+      button.title = "Download the map as a 3D model (glb)";
+    } else if (tries > 0) {
+      button.title = "Loading the brain…";
+      setTimeout(() => check(tries - 1), 300);
+    }
+  };
+  check(200);
 };
 
 const runSearch = async (query) => {

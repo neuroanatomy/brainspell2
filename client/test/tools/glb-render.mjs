@@ -1,14 +1,18 @@
 #!/usr/bin/env node
 /**
  * Renders an exported .glb with the reference viewer page (glb-viewer.html, three.js r119 GLTFLoader) from several views and backgrounds to PNG files.
- *   node client/test/tools/glb-render.mjs <base-url> <model path served under base-url, e.g. /test/tools/_sample.glb> <out-dir> [views=front,top,side,iso] [bgs=dark,white]
+ *   node client/test/tools/glb-render.mjs <base-url> <model path served under base-url, e.g. /test/tools/_sample.glb> <out-dir> [views=front,top,side,iso] [bgs=dark,white] [page]
+ *   (a 6th argument chooses the viewer page: glb-viewer.html = three.js r119, glb-viewer-modern.html = three.js r160)
  * Needs Chrome (SwiftShader) and network access to cdn.jsdelivr.net. Not part of `node --test`.
  */
 import {spawn} from "node:child_process";
 import {mkdtempSync, mkdirSync, writeFileSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
-const [base, model, out, views = "front,top,side,iso", bgs = "dark,white"] = process.argv.slice(2);
+const [base, model, out, views = "front,top,side,iso", bgs = "dark,white", page = "glb-viewer.html"] = process.argv.slice(2);
+const tag = page.includes("modern") ? "modern" : page.includes("-mv") ? "mv" : "r119";
+// model-viewer takes the camera as an orbit (theta phi radius) instead of a view name
+const ORBIT = {front: "0deg 90deg 0.5m", top: "0deg 0.01deg 0.5m", side: "90deg 90deg 0.5m", iso: "35deg 60deg 0.55m"};
 mkdirSync(out, {recursive: true});
 const port = 9800 + Math.floor(Math.random() * 90); const dir = mkdtempSync(join(tmpdir(), "gr-"));
 const chrome = spawn(process.env.CHROME || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", ["--headless=new", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist", `--remote-debugging-port=${port}`, `--user-data-dir=${dir}`, "--window-size=800,800", "about:blank"], {stdio: "ignore"});
@@ -22,12 +26,12 @@ await send("Runtime.enable"); await send("Page.enable");
 const report = [];
 for (const bg of bgs.split(",")) {
   for (const view of views.split(",")) {
-    await send("Page.navigate", {url: `${base}/test/tools/glb-viewer.html?model=${encodeURIComponent(model)}&view=${view}&bg=${bg}`});
+    await send("Page.navigate", {url: `${base}/test/tools/${page}?model=${encodeURIComponent(model)}&view=${view}&bg=${bg}&orbit=${encodeURIComponent(ORBIT[view])}`});
     let ready = false;
     for (let i = 0; i < 80 && !ready; i++) { await sleep(250); const r = await send("Runtime.evaluate", {expression: "window.__error || (window.__ready ? 'ok' : '')", returnByValue: true}); const v = r.result.result.value; if (v === "ok") ready = true; else if (v) { report.push(`${view}/${bg}: ${v}`); break; } }
     if (!ready) continue;
     const s = await send("Page.captureScreenshot", {format: "png"});
-    writeFileSync(join(out, `glb-${view}-${bg}.png`), Buffer.from(s.result.data, "base64"));
+    writeFileSync(join(out, `glb-${tag}-${view}-${bg}.png`), Buffer.from(s.result.data, "base64"));
     if (view === "front" && bg === "dark") { const r = await send("Runtime.evaluate", {expression: "JSON.stringify({info: window.__info, box: window.__box})", returnByValue: true}); report.push(r.result.result.value); }
   }
 }

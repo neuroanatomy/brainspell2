@@ -1,0 +1,19 @@
+<!doctype html>
+<!-- <model-viewer> (Google, pinned) showing a model: ?model=<path>&bg=dark|white&orbit=<theta>deg <phi>deg <radius>. A test tool, not part of the site. -->
+<html><head><meta charset="utf-8"><title>model-viewer</title>
+<script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js"></script></head>
+<body style="margin:0"><div id="h"></div>
+<script>
+const p = new URLSearchParams(location.search);
+const mv = document.createElement("model-viewer");
+mv.setAttribute("src", p.get("model"));
+mv.setAttribute("camera-orbit", p.get("orbit") || "0deg 90deg 0.5m");
+mv.setAttribute("camera-target", "0m 0m 0m");
+mv.setAttribute("field-of-view", "30deg");
+mv.setAttribute("exposure", "1");
+mv.setAttribute("shadow-intensity", "0");
+mv.style.cssText = "width:800px;height:800px;background:" + (p.get("bg") === "white" ? "#fff" : "#111");
+mv.addEventListener("load", () => setTimeout(() => { window.__ready = true; }, 1500));
+mv.addEventListener("error", (e) => { window.__error = "model-viewer error"; });
+document.getElementById("h").appendChild(mv);
+</script></body></html>

@@ -96,7 +96,7 @@ export const bakeToon = (normals, base, alpha = 255, dir = VIEW_DIR) => {
  * ignore the alpha of vertex colours) that is low where the surface faces the (top and front) viewing directions and higher at grazing angles,
  * a static version of the viewer's glow ("(1 + N.V)^2").
  */
-export const brainColors = (normals, {baseAlpha = 0.3, rimAlpha = 0.7, color = [236, 238, 242]} = {}) => {
+export const brainColors = (normals, {baseAlpha = 0.5, rimAlpha = 0.5, color = [196, 202, 212]} = {}) => {
   const top = [0, 1, 0];
   const front = [0, 0, 1];
   const out = new Uint8Array((normals.length / 3) * 4);
@@ -105,6 +105,23 @@ export const brainColors = (normals, {baseAlpha = 0.3, rimAlpha = 0.7, color = [
     const a = baseAlpha + rimAlpha * (1 - facing) ** 2;
     out[v] = color[0]; out[v + 1] = color[1]; out[v + 2] = color[2];
     out[v + 3] = Math.round(Math.min(1, a) * 255);
+  }
+
+  return out;
+};
+
+/**
+ * glTF vertex colours (COLOR_0) are LINEAR, while the colours chosen here are the ones to appear on screen (sRGB): spec-compliant viewers encode them again
+ * for display. Converts r,g,b of every vertex (alpha untouched) from sRGB to linear bytes. (A viewer that does not do the gamma step, like three.js r119,
+ * shows the linear values as they are: darker, still a clear red.)
+ */
+export const srgbToLinearColors = (colors) => {
+  const out = Uint8Array.from(colors);
+  for (let i = 0; i < out.length; i += 4) {
+    for (let k = 0; k < 3; k++) {
+      const c = out[i + k] / 255;
+      out[i + k] = Math.round(255 * (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+    }
   }
 
   return out;
@@ -209,7 +226,7 @@ export const buildMeshes = ({brain, field, surfaceNets, fractions = FRACTIONS, o
     }
     const transparent = look.alpha < 1;
     meshes.push({
-      name: `level_${pct}`, positions: gp, indices: surface.indices, colors: bakeToon(gn, look.base, 255),
+      name: `level_${pct}`, positions: gp, indices: surface.indices, colors: srgbToLinearColors(bakeToon(gn, look.base, 255)),
       material: {name: `level_${pct}`, baseColor: [1, 1, 1, look.alpha], unlit: true, alphaMode: transparent ? "BLEND" : "OPAQUE", doubleSided: transparent}
     });
     if (!transparent) {
@@ -228,8 +245,8 @@ export const buildMeshes = ({brain, field, surfaceNets, fractions = FRACTIONS, o
   // The brain is the LAST node: transparent objects with the same distance are drawn in file order, and a viewer that writes depth for transparent
   // surfaces (three.js does) would hide the inner shell behind the brain if the brain came first.
   meshes.push({
-    name: "brain", positions: bp, indices: Array.from(brain.indices), colors: brainColors(bnUnit),
-    material: {name: "brain", baseColor: [1, 1, 1, 0.3], unlit: true, alphaMode: "BLEND", doubleSided: true}
+    name: "brain", positions: bp, indices: Array.from(brain.indices), colors: srgbToLinearColors(brainColors(bnUnit)),
+    material: {name: "brain", baseColor: [1, 1, 1, 0.4], unlit: true, alphaMode: "BLEND", doubleSided: true}
   });
 
   return meshes;

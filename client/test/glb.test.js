@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {writeGlb, readGlb, readAccessor, LICENSE_TEXT, GENERATOR} from "../annotation/glb.js";
 import {
   toGltf, METRES_PER_UNIT, computeNormals, signedVolume, flipWinding, bakeToon, brainColors, outlineHull, slug, exportFilename, levelSurface, levelValue,
-  buildMeshes, buildGlb, boundingBox, FRACTIONS, VIEW_DIR
+  buildMeshes, buildGlb, boundingBox, srgbToLinearColors, FRACTIONS, VIEW_DIR
 } from "../annotation/model-export.js";
 import * as sn from "../node_modules/translucent-viewer/surfacenets.js";
 
@@ -184,4 +184,16 @@ test("filename sanitiser", () => {
   assert.match(exportFilename("x".repeat(100), 1), /^brainspell-x{40}-1papers\.glb$/);
   assert.match(exportFilename("<script>alert(1)</script>", 2), /^[a-z0-9-]+\.glb$/);
   assert.equal(slug("a--b  c"), "a-b-c");
+});
+
+test("vertex colours are written linear (glTF) from the sRGB colours chosen for the screen; alpha untouched", () => {
+  const c = srgbToLinearColors(new Uint8Array([255, 0, 128, 77, 235, 20, 20, 255]));
+  assert.deepEqual(Array.from(c.slice(0, 4)), [255, 0, 55, 77]);
+  assert.ok(Math.abs(c[4] - 212) <= 2, `sRGB 235 is linear ~212, got ${c[4]}`);
+  assert.ok(c[5] < 3 && c[6] < 3 && c[7] === 255);
+  const meshes = buildMeshes({brain: {positions: new Float32Array([0, 0, 0, 10, 0, 0, 0, 10, 0, 0, 0, 10]), indices: [0, 1, 2, 0, 2, 3, 0, 3, 1, 1, 3, 2]},
+    field: {data: sphereVolume(DIM, [22, 27, 22], 14), dim: DIM, max: 100}, surfaceNets});
+  const l50 = meshes.find((m) => m.name === "level_50");
+  assert.ok(Math.max(...l50.colors.filter((_, i) => i % 4 === 0)) <= 215, "the sRGB red 235 is stored as linear ~212");
+  assert.ok(meshes.find((m) => m.name === "brain").material.baseColor[3] === 0.4);
 });

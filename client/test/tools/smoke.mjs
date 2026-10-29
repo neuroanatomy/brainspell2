@@ -57,7 +57,7 @@ const PAGES = [
 
 const COVER = `(() => { const bad = []; let n = 0;
 for (const e of document.querySelectorAll("a, button, input, textarea, h1, h2, h3, li, label, th, td")) {
-  const r = e.getBoundingClientRect(); if (!r.width || !r.height || r.bottom < 0 || r.top > innerHeight || getComputedStyle(e).visibility === "hidden") continue;
+  const r = e.getClientRects()[0]; if (!r) continue; /* first line box: an inline link that wraps has a union box covering other text */ if (!r.width || !r.height || r.bottom < 0 || r.top > innerHeight || getComputedStyle(e).visibility === "hidden") continue;
   let hidden = false; for (let x = e; x; x = x.parentElement) { if (x.hidden || getComputedStyle(x).display === "none") { hidden = true; break; } } if (hidden) continue;
   const top = document.elementFromPoint(r.left + r.width / 2, r.top + Math.min(r.height / 2, 12)); n++;
   if (top && !(e === top || e.contains(top) || top.contains(e))) bad.push((e.tagName + "." + e.className).slice(0, 40) + " covered by " + top.tagName + "." + (top.getAttribute("class") || top.id));
@@ -112,10 +112,11 @@ const evalJs = async (b, expr) => {
 };
 
 const results = [];
-const b = await launch();
-try {
-  for (const theme of themes) {
+for (const theme of themes) {
     for (const p of PAGES) {
+      // a fresh Chrome (profile and download folder) for every check: a second automatic download in one session can be blocked
+      const b = await launch();
+      try {
       b.logs.length = 0;
       const sep = p.path.includes("?") ? "&" : "?";
       const url = `${base}${p.path}${sep}theme=${theme}`;
@@ -127,7 +128,7 @@ try {
         await sleep(500);
         if (p.search) {
           const s = await evalJs(b, STATE);
-          if (s && /articles found/.test(s.found) && s.items > 0 && /^Map from \d+ papers$/.test(s.info) && Date.now() - t0 > 400) { break; }
+          if (s && /articles found/.test(s.found) && s.items > 0 && /^Map from \d+ papers$/.test(s.info) && s.exportEnabled && Date.now() - t0 > 400) { break; } // the export button waits for the brain too
         }
       }
       const elapsed = Date.now() - t0;
@@ -149,7 +150,7 @@ try {
           const before = new Set(readdirSync(b.downloads));
           await evalJs(b, "document.querySelector('#export-glb').click()");
           let got = null;
-          for (let i = 0; i < 40 && !got; i++) {
+          for (let i = 0; i < 80 && !got; i++) { // up to 20 s; a .crdownload is a download in progress
             await sleep(250);
             got = readdirSync(b.downloads).find((n) => n.endsWith(".glb") && !before.has(n)) || null;
           }
@@ -176,11 +177,11 @@ try {
         writeFileSync(join(shots, `${p.name}-${theme}.png`), Buffer.from(s.result.data, "base64"));
       }
       results.push({page: p.name, theme, fails, info: p.search ? `${state.found}; ${state.items} items; ${state.info} in ${(elapsed / 1000).toFixed(1)} s;${state.glb ? ` glb ${state.glb};` : ""} viewer ${state.viewerW}x${state.viewerH}` : `${cover ? cover.checked : 0} elements checked`});
+      } finally {
+        b.close();
+      }
     }
   }
-} finally {
-  b.close();
-}
 
 console.log("\nPAGE         THEME  RESULT  DETAILS");
 for (const r of results) {
