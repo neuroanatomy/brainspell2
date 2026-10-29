@@ -68,12 +68,12 @@ test("anonymous: counts visible, no write control, empty table hidden, tools onl
   const sections = root.textContent;
   assert.match(sections, /Medical Subject Headings/);
   assert.match(sections, /Log in to contribute/);
-  assert.match(sections, /Table is correct: Yes 2/);
+  assert.match(sections, /Table is correct: \u2713 Yes 2/);
   assert.match(sections, /working memory/);
   assert.match(sections, /Stereotaxic space: MNI 2/);
   assert.match(sections, /Discussion/);
-  const visibleButtons = root.buttons().filter((b) => !b.textContent.includes("working memory"));
-  assert.deepEqual(visibleButtons.map((b) => b.textContent), []);
+  // the only buttons are chips (they open a read-only popup): no vote, edit or add control
+  assert.ok(root.buttons().every((b) => b.classList.contains("chip")), root.buttons().map((b) => b.textContent).join("|"));
   assert.equal(root.byTag("textarea")[0].parentNode.hidden, true);
   const exps = root.findClass("experiment");
   assert.equal(exps.length, 3);
@@ -106,16 +106,18 @@ test("logged in via ?mock=1&as=alice: full flow", async () => {
   assert.deepEqual(root.findClass("experiment").map((e) => e.hidden), [false, false, false]);
   assert.equal(root.textContent.includes("Log in to contribute"), true);
   assert.equal(root.findClass("login-hint")[0].hidden, true);
-  assert.ok(root.buttons("Agree").length >= 4);
-  // vote on a mesh heading
-  await root.buttons("Agree")[0].dispatch("click");
+  assert.equal(root.buttons("Agree").length, 0, "no inline vote buttons: they are in the popup");
+  // vote on a mesh heading through its popup
+  const brain = root.findClass("chip")[0];
+  await brain.dispatch("click");
+  await brain.parentNode.findClass("vote-popup")[0].buttons("Agree")[0].dispatch("click");
   await flush();
-  assert.match(root.findClass("mesh-item")[0].textContent, /Agree 1/);
+  assert.match(brain.textContent, /\+1 \u22120/);
   // log out: controls disappear at once
   await session.logout();
   await flush();
   assert.equal(root.findClass("login-hint")[0].hidden, false);
-  assert.equal(root.buttons("Agree").length, 0);
+  assert.equal(brain.parentNode.findClass("vote-popup")[0].buttons("Agree").length, 0, "the open popup is read-only after logout");
   assert.deepEqual(root.findClass("experiment").map((e) => e.hidden), [false, false, true]);
   api.setBackend(null);
 });

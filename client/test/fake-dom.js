@@ -51,6 +51,9 @@ export class FNode {
     this.childNodes = [];
     nodes.forEach((n) => this.appendChild(typeof n === "string" ? new FNode(3, null, n) : n));
   }
+  /** Moves the "focus" (tests read FNode.active). */
+  focus() { FNode.active = this; }
+  contains(n) { for (let x = n; x; x = x.parentNode) { if (x === this) { return true; } } return false; }
   remove() { if (this.parentNode) { this.parentNode.childNodes.splice(this.parentNode.childNodes.indexOf(this), 1); this.parentNode = null; } }
   setAttribute(k, v) { this.attrs[k] = String(v); }
   getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; }
@@ -90,7 +93,12 @@ export const makeDocument = () => {
     getElementById: (id) => ids[id] || null,
     getElementsByTagName: () => ({item: () => new FNode(1, "html")}),
     documentElement: new FNode(1, "html"),
-    register: (id, node) => { ids[id] = node; return node; }
+    register: (id, node) => { ids[id] = node; return node; },
+    listeners: {},
+    addEventListener: (type, fn) => { (doc.listeners[type] = doc.listeners[type] || []).push(fn); },
+    removeEventListener: (type, fn) => { doc.listeners[type] = (doc.listeners[type] || []).filter((f) => f !== fn); },
+    /** A click or key that reached the document (what bubbling would do in a browser). */
+    dispatch: async (type, extra = {}) => { for (const fn of doc.listeners[type] || []) { await fn({type, preventDefault() {}, ...extra}); } }
   };
   doc.documentElement.hasAttribute = () => false;
 
