@@ -1,4 +1,6 @@
 /* global Parse */
+import * as login from "./src/login.js";
+import {el, setChildren, decoded} from "./annotation/dom.js";
 
 let count;
 
@@ -6,7 +8,7 @@ const getArticleCount = async () => {
   var Articles = Parse.Object.extend("Articles");
   var query = new Parse.Query(Articles);
   const n = await query.count();
-  document.getElementById('num-articles').innerHTML = n;
+  document.getElementById('num-articles').textContent = String(n);
 
   return n;
 };
@@ -29,18 +31,21 @@ const getRandomArticles = async () => {
     query.skip(i);
     results.push(query.first());
   }
+  const list = document.getElementById("paper-list");
   for(const res of await Promise.all(results)) {
-    const newArticle = `
-        <li>
-            <span class='title'><a href='/article.html?pmid=${res.get("PMID")}'>${res.get('Title')}</a></span>
-            <span class='reference'>${res.get('Reference')}</span>
-        </li>`;
-    document.getElementById("paper-list").innerHTML += newArticle;
+    if (!res) {
+      continue;
+    }
+    list.appendChild(el("li", null,
+      el("span", {class: "title"},
+        el("a", {href: `/article.html?pmid=${encodeURIComponent(res.get("PMID"))}`}, decoded(res.get('Title')))),
+      " ",
+      el("span", {class: "reference"}, decoded(res.get('Reference')))));
   }
 };
 
 const newSearch = (query) => {
-  location.href = `search.html?q=${query}`;
+  location.href = `search.html?q=${encodeURIComponent(query)}`;
 };
 
 export const init = async () => {
@@ -52,8 +57,24 @@ export const init = async () => {
     htmlTag.className = (htmlTag.className + ' ' || '') + 'isTouch';
   }
 
+  // no inline onchange in the html (Content-Security-Policy)
+  document.getElementById("url").addEventListener("change", (e) => newSearch(e.target.value));
+  window.newSearch = newSearch;
+
   count = await getArticleCount();
   getRandomArticles();
-
-  window.newSearch = newSearch;
 };
+
+export const start = async () => {
+  try {
+    await login.init();
+  } catch (err) {
+    console.log("login init failed", err);
+  }
+  await init();
+};
+
+// the page loads this file as a module (no inline script: Content-Security-Policy)
+if (typeof document !== "undefined" && document.getElementById("paper-list") && !globalThis.__noAutostart) {
+  start();
+}
