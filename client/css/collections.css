@@ -1,0 +1,93 @@
+/* Collections (F8): header link, selection on search results, collections page. Dark style like style.css. */
+
+[hidden] {
+  display: none !important;
+}
+
+#collections-link {
+  display: inline-block;
+  margin-left: 15px;
+  color: inherit;
+  text-decoration: underline;
+}
+
+.muted {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.error {
+  color: #ff8a80;
+}
+
+.col-status.pending {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.col-status.ok {
+  color: #a5d6a7;
+}
+
+.col-status.error {
+  color: #ff8a80;
+}
+
+.col-toolbar {
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+}
+
+.col-select {
+  display: inline-block;
+  min-width: 1.4rem;
+}
+
+.col-add {
+  position: relative;
+  display: inline-block;
+}
+
+.col-menu {
+  position: absolute;
+  z-index: 5;
+  left: 0;
+  min-width: 16rem;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border: 1px solid #2d2d2d;
+  background: #1a1a1a;
+  text-align: left;
+}
+
+.col-menu-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.col-menu-list li {
+  margin: 2px 0;
+}
+
+.col-menu input.col-name {
+  width: 12rem;
+}
+
+.collection {
+  margin: 0.8rem 0;
+  padding: 6px 10px;
+  border: 1px solid #2d2d2d;
+  background: #1a1a1a;
+}
+
+.col-body {
+  margin-top: 6px;
+}
+
+.col-articles {
+  margin: 0;
+  padding-left: 1.6rem;
+}
+
+.col-articles li {
+  margin: 4px 0;
+}
