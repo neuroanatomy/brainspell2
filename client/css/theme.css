@@ -62,6 +62,7 @@
   --font-size-xl: 1.25rem;
   --font-size-title: 1.5rem;
   --font-weight-normal: 400;
+  --font-weight-light: 300;
   --font-weight-bold: 700;
   --line-height-base: 1.5;
   --line-height-tight: 1.25;
@@ -101,11 +102,15 @@
   --footer-height: 100px;
   --icon-size-sm: 15px;                  /* header icons */
   --icon-size-lg: 28px;                  /* footer logo */
+  --search-viewer-width: 800px;          /* the coactivation viewer of the search page (max width) */
+  --search-viewer-ratio: 5 / 4;          /* 800 x 640 as before; the height must exist before the viewer starts */
+  --checkbox-size: 18px;
 
   /* ---- layers and motion ------------------------------------------------------------------------------- */
   --z-base: 1;
   --z-header: 20;
   --z-popup: 30;
+  --z-overlay: 10;                       /* small status text drawn over a canvas */
   --z-backdrop: -1;                      /* decorative backgrounds: always behind the content */
   --duration-fast: 120ms;
 }

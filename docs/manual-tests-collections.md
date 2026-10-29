@@ -8,6 +8,10 @@ navigating between pages (search to collections) also resets it, so in mock mode
 checked. Search itself (Solr, `select`) needs a real server, so sections A and B are real-server tests; the
 mock covers the collections page (section C, with the collections created through the console, see C0).
 
+**Run this first:** `node client/test/tools/smoke.mjs <base-url>` (see `client/css/README.md`, "Smoke test"). It loads home, search (`?q=prosodic`), an article and the collections page
+in headless Chrome with WebGL, in both themes, and fails on JS exceptions, CSP violations, console errors, a search page without results or with an empty 3D viewer, and any element
+covered by another. Only continue with the manual steps below when it prints PASS.
+
 Renaming a collection is not available (not in the frozen API, plan 4); do not look for it.
 
 ## A. Search results (real server, logged in with GitHub), riskiest first

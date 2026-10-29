@@ -267,3 +267,14 @@ test("every absolutely or fixed positioned rule in layout.css has an explicit z-
     }
   }
 });
+
+// ---- regression: the search viewer lost its size when the style sheets were consolidated (canvas 840x0) -----------------
+test("the search viewer has a CSS-defined size before it starts, and its status line is an overlay", () => {
+  const rules = parse(read("layout.css"));
+  const decl = (sel, prop) => rules.filter((r) => r.selector === sel).flatMap((r) => r.decls).find((d) => d.prop === prop);
+  assert.ok(decl("#viewer", "aspect-ratio") || decl("#viewer", "height"), "#viewer needs aspect-ratio or height");
+  assert.ok(decl("#viewer", "width"), "#viewer needs a width");
+  assert.equal(decl("#viewer-info", "position").value, "absolute");
+  assert.equal(decl("#viewer-info", "pointer-events").value, "none");
+  assert.ok(decl("#viewer-info", "z-index"));
+});
