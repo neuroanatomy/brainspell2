@@ -1,35 +1,62 @@
 /**
- * A brief swing of the scene content that settles back to the initial view, so the brain visibly reads as 3D.
- * The camera and lights are children of the scene, so rotating the scene itself would rotate them too and cancel out on screen:
- * rotate the meshes instead.
+ * A slow, constant spin of the 3D brain (one turn per `period` ms), so it visibly reads as 3D.
+ * It moves the camera around the controls' target, exactly as TrackballControls does when the user drags:
+ * the brain, the coordinates and the cluster surface then turn together, and the light follows the camera.
+ * (Rotating the scene or its meshes does not work: the camera is a child of the scene, and the coordinate
+ * spheres are offset from the origin, so they would turn on themselves instead of around the brain.)
+ * The spin axis is the camera's up vector. If the user rotates the brain, the spin continues in the
+ * direction of the user's motion. It pauses while the user is pressing on the viewer.
  */
-export const spinHint = (scene, elem, duration = 2200, amplitude = Math.PI / 5) => {
-  if (!scene || !elem || (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) return;
-  let stopped = false;
-  const stop = () => { stopped = true; };
-  for (const evt of ["pointerdown", "wheel", "touchstart"]) elem.addEventListener(evt, stop, {once: true, passive: true});
-  // the brain mesh arrives after the scene is created: start the swing once it is there (give up after 30 s)
-  const hasBrain = () => scene.children.some((c) => c.isMesh && c.material && c.material.type === "ShaderMaterial");
-  const tWait = performance.now();
-  const turned = new Set();
-  const turn = (angle) => {
-    for (const c of scene.children) if (c.isMesh) turned.add(c);
-    for (const m of turned) m.rotation.y = angle;
+export const spinHint = (tr, elem, period = 20000) => {
+  if (!tr || !tr.camera || !tr.cameraControls || !elem || (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) return;
+  const {camera, cameraControls: controls} = tr;
+  const {THREE} = window;
+  const speed = 2 * Math.PI / period;
+  const minUserTurn = 1e-4; // rad per frame: below this the camera is considered not moved by the user
+  let direction = -1; // camera yaw sign: -1 makes the brain turn counter-clockwise seen from above
+  let pressed = false;
+  const press = () => { pressed = true; };
+  const release = () => { pressed = false; };
+  for (const evt of ["pointerdown", "touchstart"]) elem.addEventListener(evt, press, {passive: true});
+  for (const evt of ["pointerup", "pointercancel", "touchend", "touchcancel"]) window.addEventListener(evt, release, {passive: true});
+
+  const eye = new THREE.Vector3();
+  const prevEye = new THREE.Vector3().subVectors(camera.position, controls.target);
+  const axis = new THREE.Vector3();
+  const a = new THREE.Vector3();
+  const b = new THREE.Vector3();
+  const c = new THREE.Vector3();
+  const q = new THREE.Quaternion();
+  let last = null;
+
+  // signed angle between two eye vectors around the camera's up axis
+  const yaw = (from, to, up) => {
+    a.copy(from).addScaledVector(up, -from.dot(up));
+    b.copy(to).addScaledVector(up, -to.dot(up));
+
+    return Math.atan2(up.dot(c.crossVectors(a, b)), a.dot(b));
   };
-  let t0 = null;
+
   const step = (now) => {
-    if (stopped) return;
-    if (t0 === null) {
-      if (!hasBrain()) {
-        if (now - tWait < 30000) requestAnimationFrame(step);
-        return;
-      }
-      t0 = now;
+    requestAnimationFrame(step);
+    const dt = last === null ? 0 : Math.min(now - last, 100); // ms, capped after a pause
+    last = now;
+    axis.copy(camera.up).normalize();
+    eye.subVectors(camera.position, controls.target);
+
+    // whatever moved the camera since our last step was the user (drag or its inertia): follow its direction
+    const user = yaw(prevEye, eye, axis);
+    if (Math.abs(user) > minUserTurn) {
+      direction = Math.sign(user);
     }
-    const t = Math.min((now - t0) / duration, 1);
-    if (stopped) return;
-    turn(t < 1 ? amplitude * Math.sin(2 * Math.PI * t) : 0);
-    if (t < 1) requestAnimationFrame(step);
+
+    if (!pressed && dt > 0) {
+      q.setFromAxisAngle(axis, direction * speed * dt);
+      eye.applyQuaternion(q);
+      camera.up.applyQuaternion(q);
+      camera.position.addVectors(controls.target, eye);
+    }
+    prevEye.copy(eye);
   };
   requestAnimationFrame(step);
 };

@@ -163,7 +163,7 @@ const _initTranslucentCluster = async () => {
   trc.createEmptyData([45, 54, 45]);
   trcReady = true;
   renderer.touch();
-  spinHint(trc.tr.scene, document.getElementById('viewer'));
+  spinHint(trc.tr,document.getElementById('viewer'));
 };
 
 const setupMap = () => {

@@ -37,7 +37,7 @@ let viewerFactory = async (elemId, locations) => {
     locations
   });
   await trl.init();
-  spinHint(trl.tr.scene, document.getElementById(elemId));
+  spinHint(trl.tr,document.getElementById(elemId));
 };
 
 /** For the table editor: (re)build a viewer in an element. Goes through the replaceable factory. */
