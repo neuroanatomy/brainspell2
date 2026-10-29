@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://npmcdn.com https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://cdn.rawgit.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: http://localhost:*; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://npmcdn.com https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://cdn.rawgit.com; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: http://localhost:*; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="description"
     content="Open, collaborative platform for a human-curated classification of the neuroimaging literature">
   <meta name="keywords"
@@ -25,46 +25,34 @@
 
 <body>
 
-  <style>
-    svg {
-      position: absolute;
-      top: 0;
-      left: 0;
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      filter: blur(100px);
-    }
-  </style>
-  <svg width="100%" height="100%" viewbox="0 0 400 400">
-    <path d="M0,0h400,v400,h-400,v-400" fill="#111"></path>
-    <path d="M100,70h200,v200,h-200,v-200" fill="#222"></path>
+  <svg class="backdrop-svg" width="100%" height="100%" viewbox="0 0 400 400">
+    <path d="M0,0h400,v400,h-400,v-400" class="backdrop-a"></path>
+    <path d="M100,70h200,v200,h-200,v-200" class="backdrop-b"></path>
   </svg>
 
-  <div style="width:100%;height:100%;display:flex;flex-direction:column">
+  <div class="page">
     <!-- Header (fixed height) -->
-    <div style="flex:0 0 64px; z-index:2">
+    <div class="page-top page-top-compact">
       <!-- Top-right menu bar -->
       <div id="menu">
-        <a href="/" style="text-decoration:none">
+        <a class="link-plain" href="/">
           <img id="small-logo" src="/img/brainspell.svg" />
         </a>
         <img id="doc" class="button" title="documentation" src="/img/doc.svg" />
         <a href="https://github.com/neuroanatomy/BrainBox/issues/new" target="_blank"><img id="bug" class="button"
             title="report a bug" src="/img/bug.svg" /></a>
-        <a href="https://github.com/neuroanatomy" target="_blank"><img id="github" class="button"
-            title="join our github project" style="width:15px;height:15px" src="/img/github.svg" /></a>
+        <a href="https://github.com/neuroanatomy" target="_blank"><img id="github" class="button icon-sm"
+            title="join our github project" src="/img/github.svg" /></a>
         <a id="collections-link" href="collections.html" hidden>My collections</a>
-        <div id="MyLogin" style="padding-right:10px">Login with GitHub</div>
+        <div id="MyLogin">Login with GitHub</div>
       </div>
     </div>
 
     <!-- Content (variable height) -->
-    <div style="flex:1 0 auto">
+    <div class="page-main">
       <!-- Data -->
       <div id="data">
-        <div id="content" style="display:flex;justify-content:center">
+        <div id="content">
           <div id="article">
             <!-- Viewer -->
             <div id="viewer-container">
@@ -74,10 +62,10 @@
             </div>
 
             <!-- Search -->
-            <div style="position:relative;text-align:center">
-              <input id="url" style="display:block;width:100%;margin-bottom:1rem"
+            <div class="search-box">
+              <input id="url"
                 type="text" placeholder="Search articles by title, author, keyword..." />
-              <div style="text-align:right">
+              <div class="search-count">
                 <span id="num-articles"></span> articles indexed
               </div>
             </div>
@@ -98,15 +86,14 @@
     <!-- End Content -->
 
     <!-- Space (fixed height) -->
-    <div style="flex:0 0 50px">
+    <div class="page-gap">
     </div>
 
     <!-- Footer (fixed height) -->
-    <div class="site-footer" style="flex:0 0 100px">
-      <p style="width:100%;font-size:small;text-align:center">
+    <div class="site-footer">
+      <p>
         <a target="_blank" href="http://neuroanatomy.github.io">
-          <img src="img/naat-bw.svg"
-            style="width:28px;height:28px;margin-right:4px;display:inline-block;vertical-align:middle" /></a>
+          <img src="img/naat-bw.svg" /></a>
         <a target="_blank" href="http://neuroanatomy.github.io" class="linkNoULine">
           groupe de neuroanatomie appliquée et théorique
         </a>

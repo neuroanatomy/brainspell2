@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://npmcdn.com https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://cdn.rawgit.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: http://localhost:*; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://npmcdn.com https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://cdn.rawgit.com; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: http://localhost:*; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
     <meta name="description" content="Open, collaborative platform for a human-curated classification of the neuroimaging literature">
     <meta name="keywords" content="Open science, Collaboration, Neuroimaging, Cognitive science, Neuroscience, Annotation, Meta-analysis">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -22,29 +22,29 @@
 
 <body>
 
-<div style="width:100%;height:100%;display:flex;flex-direction:column">
+<div class="page">
     
     <!-- Header (fixed height) -->
-    <div style="flex:0 0 100px;z-index:2">
+    <div class="page-top">
         <!-- Top-right menu bar -->
         <div id="menu">
-            <a href="/" style="text-decoration:none">
+            <a class="link-plain" href="/">
                 <img id="small-logo" src="/img/brainspell.svg"/>
             </a>
             <img id="doc" class="button" title="documentation" src="/img/doc.svg"/>
             <a href="https://github.com/neuroanatomy/Brainspell/issues/new" target="_blank"><img id="bug" class="button" title="report a bug" src="/img/bug.svg"/></a>
-            <a href="https://github.com/neuroanatomy" target="_blank"><img id="github" class="button" title="join our github project" style="width:15px;height:15px" src="/img/github.svg"/></a>
+            <a href="https://github.com/neuroanatomy" target="_blank"><img id="github" class="button icon-sm" title="join our github project" src="/img/github.svg"/></a>
             <a id="collections-link" href="collections.html" hidden>My collections</a>
-            <div id="MyLogin" style="padding-right:10px">Login with GitHub</div>
+            <div id="MyLogin">Login with GitHub</div>
         </div>
     </div>
     
     <!-- Content (variable height) -->
-    <div style="flex:1 0 auto">
+    <div class="page-main">
             
         <!-- Data -->
         <div id="data">
-            <div id="content" style="display:flex;justify-content:center">
+            <div id="content">
                 <div id="article">
                 </div>
             </div>
@@ -55,14 +55,14 @@
     <!-- End Content -->
     
     <!-- Space (fixed height) -->
-    <div style="flex:0 0 50px">
+    <div class="page-gap">
     </div>
 
     <!-- Footer (fixed height) -->
-    <div class="site-footer" style="flex:0 0 100px">
-        <p style="width:100%;font-size:small;text-align:center"> 
+    <div class="site-footer">
+        <p> 
             <a target="_blank" href="https://neuroanatomy.github.io">
-                <img src="img/naat-bw.svg" style="width:28px;height:28px;margin-right:4px;display:inline-block;vertical-align:middle"/></a>
+                <img src="img/naat-bw.svg"/></a>
             <a target="_blank" href="https://neuroanatomy.github.io" class="linkNoULine">
                 groupe de neuroanatomie appliquée et théorique
             </a>

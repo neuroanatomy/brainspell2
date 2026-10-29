@@ -1,6 +1,6 @@
 # Manual tests: collections (WP6, F8)
 
-No browser was available when this was written; nothing below has been run in a browser. Serve `client/`
+Serve `client/`
 with a static server (`cd client && python3 -m http.server 8000`), keep the console open (a
 Content-Security-Policy violation shows in red). Mock parameters as in `docs/manual-tests-annotation.md`
 (`mock=1`, `as=alice`, `fail=155`, `latency=1500`). The mock keeps data in memory: a reload resets it, and
@@ -55,13 +55,14 @@ Against a real server, create collections from section A instead.
 | C9 | Header "My collections" link on the page. | Shown when logged in, hidden after Log Out (page switches to "Log in to see your collections"). |
 | C10 | Another user's collection ids | Cannot be reached from the UI; the server answers 101 or 119. |
 
-## Not tested without a browser
+## H. Things only a human can check
 
-Layout and CSS (menu position, dark style, narrow screens), real DOMParser entity decoding, the Content-Security-Policy
-(the pages copy index.html/search.html's meta; no inline script or handler was added), the real Parse queries for titles
-(`containedIn` on `PMID`, `select("PMID","Title")`), the OAuth flow, keyboard focus. The unit tests (`node --test test/collections.test.js`)
-cover helpers, selection, menu actions, errors, appends and the page logic on the fake DOM and the mock.
+| # | Step | Expected |
+|---|---|---|
+| H1 | Look at the toolbar and the "Add to collection" menu on search results, and the collections page, in dark and with `?theme=light`. | Buttons, inputs and the menu are readable in both themes (no light grey boxes on dark); the menu floats above the list with a border and shadow. |
+| H2 | Narrow window (about 390 px). | The toolbar wraps; the menu stays inside the window; each row's checkbox is easy to tap. |
+| H3 | Keyboard only: Tab to a result's checkbox (Space ticks it), to "Add to collection", Enter opens the menu, Tab through its entries, Esc/Enter as the page allows. | Everything reachable with a visible focus ring. |
+| H4 | Firefox, Safari, Chrome. | Same look. |
+| H5 | Real server: the "My collections" header link while logged in, and logging out. | Link shown only when logged in; on the collections page logging out shows "Log in to see your collections". |
 
-## UI round
-
-Buttons, inputs and the menu now use the shared dark base style (`client/css/README.md`); the collection name limit is 100 characters. `?theme=light` shows the light theme on the same pages. The search page was fixed to run in a real browser (`children.filter` on an HTMLCollection).
+The unit tests (`node --test test/collections.test.js`) cover helpers, selection, menu actions, errors, appends and the page logic on the fake DOM and the mock. Not checked by anything automatic: real layout, DOMParser decoding, the real Parse queries for titles, the OAuth flow.

@@ -93,6 +93,12 @@
   --popup-width: 20rem;
   --menu-width: 18rem;
   --coord-col-width: 4.5rem;
+  --page-top-space: 100px;               /* room under the fixed header (article page) */
+  --page-top-space-compact: 64px;        /* the same on search and collections */
+  --page-gap: 50px;                      /* between the content and the footer */
+  --footer-height: 100px;
+  --icon-size-sm: 15px;                  /* header icons */
+  --icon-size-lg: 28px;                  /* footer logo */
 
   /* ---- layers and motion ------------------------------------------------------------------------------- */
   --z-base: 1;

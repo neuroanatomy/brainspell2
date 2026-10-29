@@ -173,12 +173,23 @@ for (const u of ["--color-border-control", "--color-accent", "--color-focus-ring
 }
 UI_PAIRS.push(["--color-accent", "--color-selected-bg"]);
 
+/** The header logo and icons are white SVGs; --filter-header-icon (none or invert(x)) gives their displayed grey. */
+const iconGrey = (css) => {
+  const m = /--filter-header-icon:\s*([^;]+);/.exec(strip(css));
+  const inv = m && /invert\(([\d.]+)\)/.exec(m[1]);
+  const g = Math.round(255 * (1 - (inv ? Number(inv[1]) : 0))).toString(16).padStart(2, "0");
+
+  return `#${g}${g}${g}`;
+};
+
 export const contrastTable = () => {
   const dark = tokens(read("theme.css"));
   const light = {...dark, ...tokens(read("theme-light.css"))};
+  dark["--icon-header"] = iconGrey(read("theme.css"));
+  light["--icon-header"] = iconGrey(read("theme-light.css"));
   const rows = [];
   for (const [name, t] of [["dark", dark], ["light", light]]) {
-    for (const [pairs, min, kind] of [[TEXT_PAIRS, 4.5, "text"], [UI_PAIRS, 3, "ui"]]) {
+    for (const [pairs, min, kind] of [[TEXT_PAIRS, 4.5, "text"], [[...UI_PAIRS, ["--icon-header", "--color-header-bg"]], 3, "ui"]]) {
       for (const [a, b] of pairs) {
         rows.push({theme: name, kind, fg: a, bg: b, fgHex: t[a], bgHex: t[b], ratio: ratio(t[a], t[b]), min});
       }
@@ -197,5 +208,40 @@ test("contrast: text >= 4.5:1 and UI parts >= 3:1 in the dark and the light them
   }
   if (process.env.CSS_REPORT) {
     for (const r of rows) { console.log(`${r.theme}\t${r.kind}\t${r.fg} ${r.fgHex}\t${r.bg} ${r.bgHex}\t${r.ratio.toFixed(2)}`); }
+  }
+});
+
+// ---- no inline styles anywhere (look and feel is central) -----------------------------------------------------
+test("html pages have no style attribute, no <style> element and no colour literal in inline SVG", () => {
+  const root = new URL("../", import.meta.url);
+  for (const page of ["article.html", "collections.html", "index.html", "search.html"]) {
+    const html = readFileSync(new URL(page, root), "utf8");
+    assert.ok(!/\sstyle\s*=/i.test(html), `${page}: style attribute`);
+    assert.ok(!/<style[\s>]/i.test(html), `${page}: <style> element`);
+    for (const m of html.matchAll(/\b(fill|stroke|stop-color|flood-color)\s*=\s*"([^"]*)"/gi)) {
+      assert.ok(/^(none|currentColor|inherit)$/.test(m[2]), `${page}: ${m[1]}="${m[2]}" (use a class and a token)`);
+    }
+  }
+});
+
+test("page scripts never write a style attribute (blocked by the CSP without 'unsafe-inline')", () => {
+  const root = new URL("../", import.meta.url);
+  const files = [...readdirSync(new URL("annotation/", root)).filter((f) => f.endsWith(".js")).map((f) => `annotation/${f}`), "article.js", "search.js", "index.js", "collections.js"];
+  for (const f of files) {
+    const src = readFileSync(new URL(f, root), "utf8");
+    assert.ok(!/setAttribute\(\s*["']style["']/.test(src), `${f}: setAttribute("style")`);
+    assert.ok(!/\bstyle:\s*["'`]/.test(src), `${f}: style attribute passed to el()`);
+    assert.ok(!/\.cssText\b/.test(src), `${f}: cssText`);
+  }
+});
+
+test("the CSP of the pages does not allow inline styles", () => {
+  const root = new URL("../", import.meta.url);
+  for (const page of ["article.html", "collections.html", "index.html", "search.html"]) {
+    const csp = /http-equiv="Content-Security-Policy" content="([^"]*)"/.exec(readFileSync(new URL(page, root), "utf8"));
+    assert.ok(csp, `${page}: CSP meta`);
+    const style = /style-src ([^;]*)/.exec(csp[1]);
+    assert.ok(style, `${page}: style-src`);
+    assert.ok(!style[1].includes("unsafe-inline"), `${page}: style-src allows unsafe-inline`);
   }
 });

@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://npmcdn.com https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://cdn.rawgit.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: http://localhost:*; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://npmcdn.com https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://cdn.rawgit.com; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: http://localhost:*; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
   <title>brainspell: my collections</title>
@@ -20,19 +20,19 @@
 
 <body>
   <div id="menu">
-    <a href="/" style="text-decoration:none">
+    <a class="link-plain" href="/">
       <img id="small-logo" src="/img/brainspell.svg" />
     </a>
     <a href="https://github.com/neuroanatomy/BrainBox/issues/new" target="_blank"><img id="bug" class="button"
         title="report a bug" src="/img/bug.svg" /></a>
-    <a href="https://github.com/neuroanatomy" target="_blank"><img id="github" class="button"
-        title="join our github project" style="width:15px;height:15px" src="/img/github.svg" /></a>
+    <a href="https://github.com/neuroanatomy" target="_blank"><img id="github" class="button icon-sm"
+        title="join our github project" src="/img/github.svg" /></a>
     <a id="collections-link" href="collections.html" hidden>My collections</a>
-    <div id="MyLogin" style="padding-right:10px">Login with GitHub</div>
+    <div id="MyLogin">Login with GitHub</div>
   </div>
 
-  <div id="data" style="padding-top:64px">
-    <div id="content" style="display:flex;justify-content:center">
+  <div class="page-below-menu" id="data">
+    <div id="content">
       <div id="article">
         <h2>My collections</h2>
         <div id="collections"></div>
