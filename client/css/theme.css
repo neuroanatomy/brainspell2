@@ -1,0 +1,108 @@
+/*
+ * theme.css - the ONLY place where look and feel values are defined.
+ *
+ * Everything else (base.css, components.css, layout.css) uses these custom properties and never a
+ * literal colour, font size or spacing. Tokens are named by ROLE, not by value. To restyle the site
+ * edit this file, or override tokens in a theme file (see theme-light.css and README.md).
+ *
+ * Contrast (WCAG 2.x) of this dark theme is listed in README.md; text >= 4.5:1, UI borders/icons >= 3:1.
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* ---- colours: surfaces ------------------------------------------------------------------- */
+  --color-bg: #111;                      /* page */
+  --color-surface: #1a1a1a;              /* cards, popups, menus */
+  --color-surface-raised: #262626;       /* table headers, hovered rows, segmented background */
+  --color-header-bg: #000;               /* the top bar and the footer */
+  --color-field-bg: #0b0b0b;             /* text inputs and text areas */
+  --color-selected-bg: #26364d;          /* selected row, pressed toggle */
+  --color-new-row-bg: #1b2b1f;           /* a row being added */
+
+  /* ---- colours: text ---------------------------------------------------------------------- */
+  --color-text: #e8e8e8;
+  --color-text-muted: #a8a8a8;
+  --color-text-on-accent: #0b0b0b;       /* text on a filled accent button */
+  --color-link: #8ab4f8;
+
+  /* ---- colours: borders and focus ----------------------------------------------------------- */
+  --color-border: #3a3a3a;               /* decorative separators (not required to reach 3:1) */
+  --color-border-control: #6a6a6a;       /* edges of buttons, inputs, chips (3:1 on the page) */
+  --color-accent: #8ab4f8;               /* focus ring, pressed state, selected outline */
+  --color-focus-ring: #8ab4f8;
+
+  /* ---- colours: controls --------------------------------------------------------------------- */
+  --color-control-bg: #1a1a1a;
+  --color-control-bg-hover: #2e2e2e;
+  --color-primary-bg: #8ab4f8;
+  --color-primary-bg-hover: #aecbfa;
+
+  /* ---- colours: meaning ------------------------------------------------------------------------ */
+  --color-vote-agree: #7ddc95;
+  --color-vote-tie: #e0b34a;
+  --color-vote-disagree: #ff9b94;
+  --color-danger: #ff9b94;
+  --color-success: #7ddc95;
+
+  /* ---- decorative / page backdrop ----------------------------------------------------------------- */
+  --backdrop-filter: contrast(120%) brightness(50%) sepia(30%) saturate(40%);
+
+  /* ---- typography ------------------------------------------------------------------------------- */
+  --font-family-base: "Lucida Grande", "Lucida Sans Unicode", Helvetica, Arial, Verdana, sans-serif;
+  --font-family-heading: "Lucida Grande", "Lucida Sans Unicode", Helvetica, Arial, Verdana, sans-serif;
+  --font-family-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --font-size-xs: 0.8125rem;             /* 13px: the smallest text anywhere (counts, hints) */
+  --font-size-sm: 0.875rem;              /* 14px: controls */
+  --font-size-base: 0.9375rem;           /* 15px: body */
+  --font-size-lg: 1.0625rem;
+  --font-size-xl: 1.25rem;
+  --font-size-title: 1.5rem;
+  --font-weight-normal: 400;
+  --font-weight-bold: 700;
+  --line-height-base: 1.5;
+  --line-height-tight: 1.25;
+
+  /* ---- spacing (8px base) ------------------------------------------------------------------------ */
+  --space-1: 4px;
+  --space-1-5: 6px;                      /* gap between chips */
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* ---- shape ----------------------------------------------------------------------------------------- */
+  --radius: 4px;
+  --radius-round: 999px;
+  --border-width: 1px;
+  --border-width-band: 6px;              /* vote balance band on a chip */
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --shadow-popup: 0 4px 16px rgb(0 0 0 / 60%);
+
+  /* ---- sizes ----------------------------------------------------------------------------------------- */
+  --control-min-height: 28px;
+  --hit-area: 24px;                      /* icon buttons */
+  --hit-area-touch: 36px;                /* the same on touch devices */
+  --content-max-width: 56rem;
+  --viewer-size: 480px;
+  --table-max-height: 420px;
+  --popup-width: 20rem;
+  --menu-width: 18rem;
+  --coord-col-width: 4.5rem;
+
+  /* ---- layers and motion ------------------------------------------------------------------------------- */
+  --z-base: 1;
+  --z-header: 20;
+  --z-popup: 30;
+  --duration-fast: 120ms;
+}
+
+/* people who ask for less motion get none: every transition uses the token above */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+  }
+}

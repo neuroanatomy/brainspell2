@@ -1,0 +1,354 @@
+/*
+ * components.css - reusable pieces, built from the tokens of theme.css and the element defaults of
+ * base.css. One section per component. (Rewritten per stage; see README.md for how to add a component.)
+ */
+
+/* ==== status-message ============================================================================== */
+.muted {
+  color: var(--color-text-muted);
+}
+
+.error,
+.ann-status.error,
+.col-status.error {
+  color: var(--color-danger);
+}
+
+.ann-status {
+  margin-left: var(--space-1-5);
+  font-size: var(--font-size-xs);
+}
+
+.ann-status.pending,
+.col-status.pending {
+  color: var(--color-text-muted);
+}
+
+.col-status.ok {
+  color: var(--color-success);
+}
+
+.login-hint {
+  margin: var(--space-4) 0 0;
+  padding: var(--space-1-5) var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+/* ==== tag-chip (legacy markup, replaced in stage 2) ====================================================== */
+.tag {
+  display: inline-block;
+  padding: var(--space-1) var(--space-2);
+  margin: var(--space-1) 0;
+  border-radius: var(--radius-round);
+  border: var(--border-width) solid var(--color-border-control);
+  background: var(--color-surface-raised);
+}
+
+.bal-none { background: var(--color-surface-raised); }
+.bal-good,
+.bal-ok { border-color: var(--color-vote-agree); }
+.bal-tie { border-color: var(--color-vote-tie); }
+.bal-poor,
+.bal-bad { border-color: var(--color-vote-disagree); }
+
+.table-ok.bal-good,
+.table-ok.bal-ok,
+.table-ok.bal-tie,
+.table-ok.bal-poor,
+.table-ok.bal-bad,
+.table-ok.bal-none {
+  background: none;
+  border-color: transparent;
+}
+
+.mesh-list {
+  line-height: 2rem;
+}
+
+.mesh-item {
+  display: inline-block;
+  margin-right: var(--space-3);
+  white-space: nowrap;
+}
+
+.vote-controls {
+  margin-left: var(--space-1);
+}
+
+button.vote,
+button.tag-add,
+button.onto,
+button.concept,
+button.close {
+  margin-left: var(--space-1);
+}
+
+button.vote.mine,
+button.onto.active {
+  border-color: var(--color-accent);
+  background: var(--color-selected-bg);
+}
+
+.count {
+  font-size: var(--font-size-xs);
+  margin-left: var(--space-1-5);
+  color: var(--color-text-muted);
+}
+
+.table-ok {
+  margin: var(--space-1-5) 0;
+}
+
+.tags {
+  margin: var(--space-1-5) 0 var(--space-3);
+}
+
+.tag-chips {
+  display: inline;
+}
+
+button.tag.chip {
+  margin-right: var(--space-1-5);
+}
+
+button.tag.chip.mine {
+  box-shadow: 0 0 0 var(--border-width) var(--color-accent);
+}
+
+.tag .counts {
+  font-size: var(--font-size-xs);
+}
+
+.tag-popup,
+.tag-picker {
+  margin-top: var(--space-1-5);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  background: var(--color-surface);
+  max-width: 560px;
+}
+
+.tag-ontologies {
+  margin-bottom: var(--space-1-5);
+}
+
+input.tag-filter {
+  display: block;
+  width: calc(100% - var(--space-4));
+  margin-bottom: var(--space-1-5);
+}
+
+input.nsubjects-input {
+  width: 6rem;
+}
+
+ul.tag-concepts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 220px;
+  overflow: auto;
+  text-align: left;
+}
+
+ul.tag-concepts li {
+  padding: var(--space-1) 0;
+}
+
+button.concept {
+  width: 100%;
+  text-align: left;
+  margin-left: 0;
+}
+
+.meta-row {
+  margin: var(--space-1-5) 0;
+}
+
+/* ==== comments =========================================================================================== */
+ul.comment-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}
+
+li.comment {
+  margin: var(--space-2) 0;
+  padding: var(--space-1-5) var(--space-3);
+  border-left: var(--focus-ring-width) solid var(--color-border);
+}
+
+.comment-body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.comment-box textarea {
+  display: block;
+  width: calc(100% - var(--space-4));
+  margin-bottom: var(--space-1-5);
+}
+
+.empty-table {
+  margin: var(--space-1) 0;
+}
+
+/* ==== table editor (legacy markup, replaced in stage 3) ================================================== */
+.experiment.te-active .exp-readonly {
+  display: none;
+}
+
+.te-root {
+  margin-top: var(--space-1);
+}
+
+.te-bar,
+.te-textform,
+.te-empty {
+  margin: var(--space-1) 0;
+}
+
+.te-btn {
+  margin: 0 var(--space-1) var(--space-1) 0;
+}
+
+.te-scroll {
+  max-height: var(--table-max-height);
+  overflow: auto;
+}
+
+.te-table th,
+.te-table td {
+  padding: var(--space-1);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.te-table tbody tr {
+  cursor: pointer;
+}
+
+.te-table tbody tr:hover {
+  background: var(--color-surface-raised);
+}
+
+.te-table tr.te-selected {
+  background: var(--color-selected-bg);
+}
+
+.te-table tr.te-new {
+  background: var(--color-new-row-bg);
+}
+
+.te-cell {
+  width: 4.5em;
+  text-align: center;
+}
+
+.te-text {
+  width: 100%;
+}
+
+/* ==== dialog (import from text) ============================================================================= */
+.te-import {
+  margin: var(--space-2) 0;
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--color-border-control);
+  background: var(--color-surface);
+}
+
+.te-import h4 {
+  margin: 0 0 var(--space-1);
+}
+
+.te-import-text {
+  width: 100%;
+  font-family: var(--font-family-mono);
+}
+
+.te-import-preview {
+  margin-top: var(--space-1-5);
+  max-height: 240px;
+  overflow: auto;
+}
+
+.te-import-rows td,
+.te-import-rows th {
+  padding: 0 var(--space-2);
+  text-align: right;
+}
+
+.add-article label {
+  display: inline-block;
+}
+
+.add-ntables {
+  width: 5em;
+}
+
+/* ==== collections ============================================================================================== */
+.col-toolbar {
+  margin: var(--space-2) 0;
+  font-size: var(--font-size-sm);
+}
+
+.col-select {
+  display: inline-block;
+  min-width: 1.4rem;
+}
+
+.col-add {
+  position: relative;
+  display: inline-block;
+}
+
+.col-menu {
+  position: absolute;
+  z-index: var(--z-popup);
+  left: 0;
+  min-width: var(--menu-width);
+  margin-top: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--color-border-control);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-popup);
+  text-align: left;
+}
+
+.col-menu-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.col-menu-list li {
+  margin: var(--space-1) 0;
+}
+
+.col-menu input.col-name {
+  width: 12rem;
+}
+
+.collection {
+  margin: var(--space-3) 0;
+  padding: var(--space-1-5) var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.col-body {
+  margin-top: var(--space-1-5);
+}
+
+.col-articles {
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+.col-articles li {
+  margin: var(--space-1) 0;
+}

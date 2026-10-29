@@ -1,0 +1,164 @@
+/*
+ * layout.css - where things are on the pages: header, page columns, the experiment grid, the 3D viewer
+ * boxes and the home/search backdrop. Built from the tokens of theme.css only.
+ */
+
+/* ---- header (all pages) ------------------------------------------------------------------------- */
+#menu {
+  position: fixed;
+  top: 0;
+  width: 100%;
+  height: var(--space-6);
+  padding-top: var(--space-2);
+  box-sizing: content-box;
+  background: var(--color-header-bg);
+  z-index: var(--z-header);
+  text-align: right;
+  font-size: var(--font-size-base);
+  line-height: var(--space-5);
+}
+
+#menu a {
+  color: var(--color-text);
+}
+
+#menu img {
+  margin-left: var(--space-4);
+}
+
+#MyLogin {
+  display: inline-block;
+  margin-left: var(--space-4);
+  padding-right: var(--space-2);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+#MyLogin.in {
+  text-decoration: none;
+  cursor: default;
+}
+
+#collections-link {
+  display: inline-block;
+  margin-left: var(--space-4);
+  color: inherit;
+}
+
+img#small-logo {
+  height: var(--space-5);
+  padding: var(--space-1);
+  float: left;
+}
+
+img.button {
+  width: var(--space-4);
+  height: var(--space-4);
+  margin: var(--space-2) var(--space-1);
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+img.button:hover {
+  opacity: 0.5;
+}
+
+#footer {
+  background: var(--color-header-bg);
+}
+
+/* ---- article page --------------------------------------------------------------------------------- */
+#article {
+  width: min(100% - 2 * var(--space-4), var(--content-max-width));
+  text-align: left;
+}
+
+#article h2 {
+  text-transform: uppercase;
+  font-size: var(--font-size-lg);
+  margin-top: var(--space-6);
+  margin-bottom: var(--space-2);
+}
+
+.mesh,
+.experiments,
+.meta,
+.comments {
+  margin-top: var(--space-6);
+}
+
+.experiment {
+  margin-top: var(--space-5);
+}
+
+.exp-grid {
+  display: block;
+}
+
+.coords-table td,
+.coords-table th {
+  width: var(--coord-col-width);
+  text-align: center;
+  padding: 0;
+}
+
+.noEmptyWithPlaceholder:empty::before {
+  content: attr(placeholder);
+  color: var(--color-text-muted);
+}
+
+#viewer-container {
+  position: relative;
+}
+
+#table-wrapper {
+  position: relative;
+}
+
+#table-scroll {
+  max-height: var(--table-max-height);
+  overflow: auto;
+}
+
+/* ---- home page and search page --------------------------------------------------------------------- */
+.content {
+  display: inline-block;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  max-width: calc(100% - 20px);
+}
+
+.content h2,
+.content p {
+  text-align: center;
+}
+
+h1 {
+  text-align: center;
+}
+
+img#logo {
+  margin: var(--space-5) 0 var(--space-5) 50%;
+  transform: translate(-50%, 0);
+  width: 250px;
+}
+
+#background {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  min-height: 100%;
+  min-width: 100%;
+  filter: var(--backdrop-filter);
+  z-index: -1;
+}
+
+input#url,
+input#projectName {
+  width: calc(100% - var(--space-2));
+  height: var(--space-6);
+}
