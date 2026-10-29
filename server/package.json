@@ -5,7 +5,8 @@
   "main": "app.js",
   "scripts": {
     "start": "node ./app.js",
-    "test": "npm run test"
+    "test": "node --test test/core/",
+    "test:integration": "node test/integration/run.js"
   },
   "author": "",
   "license": "ISC",
@@ -22,6 +23,7 @@
     "translucent-viewer": "github:neuroanatomy/translucent-viewer"
   },
   "devDependencies": {
+    "mongodb": "^3.6.11",
     "eslint-config-naat": "git+https://github.com/neuroanatomy/eslint-config-naat.git"
   }
 }

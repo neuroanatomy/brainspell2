@@ -6,13 +6,22 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var {ParseServer} = require('parse-server');
 var oauthshim = require('oauth-shim');
-const config = JSON.parse(fs.readFileSync('./config.json'));
+// Settings come from the environment; the defaults are the values used so far.
+const configPath = process.env.CONFIG || './config.json';
+const port = parseInt(process.env.PORT || '1337', 10);
+const liveQueryPort = parseInt(process.env.LIVEQUERY_PORT || '8080', 10);
+const config = JSON.parse(fs.readFileSync(configPath));
+// The cloud code path is resolved against this folder, not against the working directory.
+const cloud = process.env.CLOUD || config.parseConfig.cloud;
+if (cloud) {
+  config.parseConfig.cloud = path.resolve(__dirname, cloud);
+}
 var api = new ParseServer(config.parseConfig);
 var app = express();
 
 // setup livequery server
 const server = require('http').createServer(app);
-server.listen(8080);
+server.listen(liveQueryPort);
 
 const parseLiveQueryServer = ParseServer.createLiveQueryServer(server);
 
@@ -33,8 +42,8 @@ app.get('/', (req, res) => {
 app.use('/parse/proxy', oauthshim);
 app.use('/parse', api);
 app.use('/proxy', oauthshim);
-app.listen(1337, function() {
-  console.log('parse-server running on port 1337.');
+app.listen(port, function() {
+  console.log(`parse-server running on port ${port}.`);
 });
 
 app.set('views', path.join(__dirname, 'views'));

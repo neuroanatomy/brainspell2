@@ -8,6 +8,8 @@
         "masterKey": "[COMPLETE]",
         "appName": "brainspell",
         "cloud": "./cloud/main",
+        "allowClientClassCreation": false,
+        "enableAnonymousUsers": false,
         "databaseURI": "mongodb://127.0.0.1:27017/parse",
         "serverURL": "http://localhost:1337/parse",
         "auth": {

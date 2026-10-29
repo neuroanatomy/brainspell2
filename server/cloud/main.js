@@ -1,12 +1,14 @@
-// Cloud Code entry point
+// Cloud Code entry point: loads every other *.js file of this folder.
+// Each file registers its own cloud functions and triggers.
 
-var request = require('request-promise');
-var solrURL = "http://localhost:8983/solr/brainspell/select";
-Parse.Cloud.define("select", async (req) => {
-    const qs = (({ q, fl, defType, qf, start, rows}) => ({ q, fl, defType, qf, start, rows }))(req.params);
-    let res = await request({
-        url: solrURL,
-        qs: qs
-    });
-    return JSON.parse(res).response;
-});
+var fs = require('fs');
+var path = require('path');
+
+var self = path.basename(__filename);
+
+fs.readdirSync(__dirname)
+  .filter((f) => f.endsWith('.js') && f !== self)
+  .sort()
+  .forEach((f) => {
+    require(path.join(__dirname, f));
+  });
