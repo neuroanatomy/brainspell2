@@ -39,6 +39,7 @@
   --color-danger: #b3261e;
   --color-success: #1b7a33;
 
-  --backdrop-filter: none;
+  --filter-header-icon: invert(0.7);
+  --backdrop-filter: contrast(55%) brightness(185%) sepia(15%) saturate(30%);
   --shadow-popup: 0 4px 16px rgb(0 0 0 / 25%);
 }

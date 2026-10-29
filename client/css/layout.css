@@ -63,8 +63,14 @@ img.button:hover {
   opacity: 0.5;
 }
 
-#footer {
+.site-footer {
   background: var(--color-header-bg);
+}
+
+#menu img,
+.site-footer img,
+img#logo {
+  filter: var(--filter-header-icon);
 }
 
 /* ---- article page --------------------------------------------------------------------------------- */

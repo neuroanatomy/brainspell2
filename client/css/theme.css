@@ -46,6 +46,7 @@
   --color-success: #7ddc95;
 
   /* ---- decorative / page backdrop ----------------------------------------------------------------- */
+  --filter-header-icon: none;            /* the header logo and icons are white SVGs; a light theme inverts them */
   --backdrop-filter: contrast(120%) brightness(50%) sepia(30%) saturate(40%);
 
   /* ---- typography ------------------------------------------------------------------------------- */
