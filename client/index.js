@@ -1,6 +1,7 @@
 /* global Parse */
 import * as login from "./src/login.js";
 import {el, setChildren, decoded} from "./annotation/dom.js";
+import {initHeaderLink} from "./annotation/collections.js";
 
 let count;
 
@@ -61,6 +62,7 @@ export const init = async () => {
   document.getElementById("url").addEventListener("change", (e) => newSearch(e.target.value));
   window.newSearch = newSearch;
 
+  initHeaderLink();
   count = await getArticleCount();
   getRandomArticles();
 };

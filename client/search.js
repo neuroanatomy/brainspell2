@@ -2,6 +2,7 @@
 import TranslucentCluster from "./node_modules/translucent-viewer/translucent-cluster.js";
 import * as login from "./src/login.js";
 import {el, setChildren, decoded} from "./annotation/dom.js";
+import {mountSearchSelection, selectSlot, initHeaderLink} from "./annotation/collections.js";
 
 const params = new URLSearchParams(location.search);
 const sum = [];
@@ -12,6 +13,7 @@ let locations;
 let trc;
 const searchResults = [];
 let articlesDisplayed = 0;
+let selectionUI = null; // checkboxes and "add to collection" (logged-in users only)
 
 /**
  * @func configureROI
@@ -70,7 +72,8 @@ const displayMoreArticles = () => {
   const list = document.getElementById("paper-list");
   for(let i=0; i<narticles; i++) {
     const {pmid, title, reference, score} = searchResults[articlesDisplayed + i];
-    list.appendChild(el("li", null,
+    list.appendChild(el("li", {dataset: {pmid: String(pmid)}},
+      selectSlot(),
       el("span", {class: "title"}, el("a", {href: `/article.html?pmid=${encodeURIComponent(pmid)}`}, decoded(title))),
       " ",
       el("span", {class: "reference"}, decoded(reference)),
@@ -78,6 +81,9 @@ const displayMoreArticles = () => {
       el("span", {class: "score"}, `(${Number(score) || 0}%)`)));
   }
   articlesDisplayed += narticles;
+  if (selectionUI) {
+    selectionUI.refresh();
+  }
   console.log(articlesDisplayed);
 };
 
@@ -270,6 +276,9 @@ export const init = async () => {
   // no inline onchange in the html (Content-Security-Policy)
   document.getElementById("url").addEventListener("change", (e) => newSearch(e.target.value));
   window.newSearch = newSearch;
+
+  initHeaderLink();
+  selectionUI = mountSearchSelection({list: document.getElementById("paper-list"), toolbar: document.getElementById("selection-toolbar")});
 
   await getArticleCount();
   await _initTranslucentCluster();
