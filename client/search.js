@@ -1,5 +1,7 @@
 /* global Parse */
 import TranslucentCluster from "./node_modules/translucent-viewer/translucent-cluster.js";
+import * as login from "./src/login.js";
+import {el, setChildren, decoded} from "./annotation/dom.js";
 
 const params = new URLSearchParams(location.search);
 const sum = [];
@@ -50,7 +52,7 @@ const getArticleCount = async () => {
   var Articles = Parse.Object.extend("Articles");
   var query = new Parse.Query(Articles);
   const n = await query.count();
-  document.getElementById('num-articles').innerHTML = n;
+  document.getElementById('num-articles').textContent = String(n);
 
   return n;
 };
@@ -65,21 +67,18 @@ const displayMoreArticles = () => {
 
   console.log("append more articles", articlesDisplayed);
 
-  let str = "";
+  const list = document.getElementById("paper-list");
   for(let i=0; i<narticles; i++) {
     const {pmid, title, reference, score} = searchResults[articlesDisplayed + i];
-    const newArticle = `
-        <li>
-            <span class='title'><a href='/article.html?pmid=${pmid}'>${title}</a></span>
-            <span class='reference'>${reference}</span>
-            <span class='score'>(${score}%)</span>
-        </li>`;
-    str += newArticle;
+    list.appendChild(el("li", null,
+      el("span", {class: "title"}, el("a", {href: `/article.html?pmid=${encodeURIComponent(pmid)}`}, decoded(title))),
+      " ",
+      el("span", {class: "reference"}, decoded(reference)),
+      " ",
+      el("span", {class: "score"}, `(${Number(score) || 0}%)`)));
   }
   articlesDisplayed += narticles;
   console.log(articlesDisplayed);
-
-  document.getElementById("paper-list").innerHTML += str;
 };
 
 const displayArticles = () => {
@@ -112,7 +111,7 @@ const queryArticlesSlice = async (res) => {
 
   displayArticles();
 
-  document.getElementById("viewer-info").innerHTML =
+  document.getElementById("viewer-info").textContent =
     `${(100*(res.start+res.docs.length)/res.numFound)|0}% loaded...`;
 };
 
@@ -138,8 +137,8 @@ const _searchChunk = async (query, start, rows, resolve) => {
 
   if (start === 0) {
     document.getElementById('url').value = query;
-    document.getElementById("paper-list").innerHTML = "";
-    document.getElementById("num-found").innerHTML = `${res.numFound} articles found`;
+    setChildren(document.getElementById("paper-list"));
+    document.getElementById("num-found").textContent = `${Number(res.numFound) || 0} articles found`;
   }
 
   await queryArticlesSlice(res);
@@ -164,7 +163,7 @@ const search = async (query) => {
 };
 
 const newSearch = (query) => {
-  location.href = `search.html?q=${query}`;
+  location.href = `search.html?q=${encodeURIComponent(query)}`;
 };
 
 const initAggregateVolume = () => {
@@ -215,7 +214,7 @@ const aggregateLocations = () => {
 
 const handleLevelChange = () => {
   level = Number(document.querySelector('#level').value);
-  document.querySelector('#levelValue').innerText = level + "%";
+  document.querySelector('#levelValue').textContent = level + "%";
   trc.cmap.level = maxSum * level / 100 + maxSum / 1000;
   trc.updateMesh(trc.cmap);
 };
@@ -237,7 +236,7 @@ const _initAggregation = () => {
   initAggregateVolume();
   trc.createEmptyData([LR, PA, IS]);
   document.querySelector('#level').value = level;
-  document.querySelector('#levelValue').innerText = level + "%";
+  document.querySelector('#levelValue').textContent = level + "%";
   document.querySelector('#level').addEventListener('input', handleLevelChange);
 };
 
@@ -256,7 +255,7 @@ const _aggregate = () => {
 };
 
 const _stopAggregation = (timer) => {
-  document.getElementById("viewer-info").innerHTML = "";
+  document.getElementById("viewer-info").textContent = "";
   clearInterval(timer);
   aggregateLocations();
   trc.updateMesh({
@@ -268,6 +267,8 @@ const _stopAggregation = (timer) => {
 
 export const init = async () => {
   setupTouch();
+  // no inline onchange in the html (Content-Security-Policy)
+  document.getElementById("url").addEventListener("change", (e) => newSearch(e.target.value));
   window.newSearch = newSearch;
 
   await getArticleCount();
@@ -282,3 +283,17 @@ export const init = async () => {
     displayArticles
   );
 };
+
+export const start = async () => {
+  try {
+    await login.init();
+  } catch (err) {
+    console.log("login init failed", err);
+  }
+  await init();
+};
+
+// the page loads this file as a module (no inline script: Content-Security-Policy)
+if (typeof document !== "undefined" && document.getElementById("paper-list") && !globalThis.__noAutostart) {
+  start();
+}
