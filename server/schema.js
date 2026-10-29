@@ -78,6 +78,12 @@ const CLASSES = [
     indexes: {},
     classLevelPermissions: Object.assign(clp(NOBODY, NOBODY), {create: PUBLIC})
   },
+  {
+    // Integration tests showed that in Parse 4.10.2 user A could PUT on user B's _Session with
+    // the default (open) CLP. Sessions are managed by Parse itself with the master key
+    // (login, /users/me, /sessions/me, logout), so clients get no direct access.
+    className: '_Session', fields: {}, indexes: {}, classLevelPermissions: CLOSED
+  },
   {className: '_Role', fields: {}, indexes: {}, classLevelPermissions: CLOSED},
   {className: 'GameScore', fields: {}, indexes: {}, classLevelPermissions: CLOSED}
 ];

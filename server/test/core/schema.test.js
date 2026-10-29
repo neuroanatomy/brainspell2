@@ -28,7 +28,7 @@ test('CLP table of plan 3.2', () => {
       assert.deepStrictEqual(byName[n].classLevelPermissions[op], {}, `${n}.${op}`);
     }
   }
-  for (const n of ['Vote', 'Collection', 'Revision', 'UserProfile', '_Role', 'GameScore']) {
+  for (const n of ['Vote', 'Collection', 'Revision', 'UserProfile', '_Role', '_Session', 'GameScore']) {
     for (const op of OPERATIONS) {
       assert.deepStrictEqual(byName[n].classLevelPermissions[op], {}, `${n}.${op}`);
     }
