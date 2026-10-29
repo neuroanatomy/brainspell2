@@ -166,7 +166,7 @@ for (const t of ["--color-text", "--color-text-muted"]) { for (const s of SURFAC
 for (const t of ["--color-link", "--color-danger", "--color-success", "--color-vote-agree", "--color-vote-tie", "--color-vote-disagree"]) {
   for (const s of ["--color-bg", "--color-surface", "--color-field-bg", "--color-control-bg"]) { TEXT_PAIRS.push([t, s]); }
 }
-TEXT_PAIRS.push(["--color-text-on-accent", "--color-primary-bg"], ["--color-text-on-accent", "--color-primary-bg-hover"], ["--color-text", "--color-control-bg-hover"]);
+TEXT_PAIRS.push(["--color-footer-text", "--color-footer-bg"], ["--color-text-on-accent", "--color-primary-bg"], ["--color-text-on-accent", "--color-primary-bg-hover"], ["--color-text", "--color-control-bg-hover"]);
 const UI_PAIRS = [];
 for (const u of ["--color-border-control", "--color-accent", "--color-focus-ring", "--color-vote-agree", "--color-vote-tie", "--color-vote-disagree"]) {
   for (const s of ["--color-bg", "--color-surface", "--color-field-bg", "--color-control-bg"]) { UI_PAIRS.push([u, s]); }
@@ -243,5 +243,27 @@ test("the CSP of the pages does not allow inline styles", () => {
     const style = /style-src ([^;]*)/.exec(csp[1]);
     assert.ok(style, `${page}: style-src`);
     assert.ok(!style[1].includes("unsafe-inline"), `${page}: style-src allows unsafe-inline`);
+  }
+});
+
+// ---- stacking: decorative backgrounds must stay behind the content (regression: the blurred SVG covered the results) ----
+test("decorative backdrops (svg.backdrop-svg, #background) sit behind the content and ignore the pointer", () => {
+  const rules = parse(read("layout.css"));
+  for (const sel of ["svg.backdrop-svg", "#background"]) {
+    const decls = rules.filter((r) => r.selector === sel).flatMap((r) => r.decls);
+    const z = decls.find((d) => d.prop === "z-index");
+    assert.ok(z && z.value === "var(--z-backdrop)", `${sel}: z-index must be var(--z-backdrop)`);
+    assert.ok(decls.some((d) => d.prop === "pointer-events" && d.value === "none"), `${sel}: pointer-events: none`);
+  }
+  assert.equal(strip(read("theme.css")).match(/--z-backdrop:\s*(-\d+)/)[1] < 0, true, "--z-backdrop is negative");
+});
+
+test("every absolutely or fixed positioned rule in layout.css has an explicit z-index token or is a positioned child of a stacking parent", () => {
+  // positioned elements without z-index paint above in-flow content: list them so a new one is a conscious choice
+  const known = new Set([".content", "#menu", "svg.backdrop-svg", "#background", "#viewer-info", ".search-box"]);
+  for (const {selector, decls} of parse(read("layout.css"))) {
+    if (decls.some((d) => d.prop === "position" && /absolute|fixed/.test(d.value))) {
+      assert.ok(known.has(selector), `layout.css: new positioned rule "${selector}": check what it overlaps and add it here`);
+    }
   }
 });
