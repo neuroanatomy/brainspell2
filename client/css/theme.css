@@ -15,7 +15,9 @@
   --color-bg: #111;                      /* page */
   --color-surface: #1a1a1a;              /* cards, popups, menus */
   --color-surface-raised: #262626;       /* table headers, hovered rows, segmented background */
-  --color-header-bg: #000;               /* the top bar and the footer */
+  --color-header-bg: #000;               /* the top bar */
+  --color-footer-bg: #000;               /* the footer: dark in every theme */
+  --color-footer-text: #fff;
   --color-field-bg: #0b0b0b;             /* text inputs and text areas */
   --color-selected-bg: #26364d;          /* selected row, pressed toggle */
   --color-new-row-bg: #1b2b1f;           /* a row being added */
@@ -104,6 +106,7 @@
   --z-base: 1;
   --z-header: 20;
   --z-popup: 30;
+  --z-backdrop: -1;                      /* decorative backgrounds: always behind the content */
   --duration-fast: 120ms;
 }
 
