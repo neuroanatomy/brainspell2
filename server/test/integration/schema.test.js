@@ -32,7 +32,10 @@ test('apply-schema: fields, indexes and CLP are in place', async (ctx) => {
     for (const name of Object.keys(c.indexes)) {
       assert.ok(s[c.className].indexes && s[c.className].indexes[name], `index ${c.className}.${name}`);
     }
-    assert.deepStrictEqual(s[c.className].classLevelPermissions, c.classLevelPermissions, c.className);
+    // Parse adds protectedFields: {} itself; compare only the operations declared
+    for (const op of Object.keys(c.classLevelPermissions)) {
+      assert.deepStrictEqual(s[c.className].classLevelPermissions[op], c.classLevelPermissions[op], `${c.className}.${op}`);
+    }
   }
 });
 

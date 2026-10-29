@@ -125,7 +125,12 @@ test('concurrent votes by the same user leave exactly one row', async (ctx) => {
   const where = encodeURIComponent(JSON.stringify({pmid: '424242', user: carol.id, kind: 'tableOk', experimentId: 2}));
   const rows = (await ctx.rest('GET', '/classes/Vote?where=' + where, {master: true})).json.results;
   assert.strictEqual(rows.length, 1, `rows: ${JSON.stringify(rows)}`);
-  assert.strictEqual(rows[0].value, 1);
+  // 20 simultaneous requests have no guaranteed order: the final value is 1 or -1 (or 0 rows
+  // if a retract came last, excluded here by the row count), and it must match what is read back
+  assert.ok(rows[0].value === 1 || rows[0].value === -1, `value ${rows[0].value}`);
+  const ann = ok(await ctx.cloud('getAnnotations', {pmid: '424242'}, carol.session), 'getAnnotations');
+  const t2 = ann.votes.find((x) => x.kind === 'tableOk' && x.experimentId === 2);
+  assert.strictEqual(t2.mine, rows[0].value);
   const ns = await Promise.all([3, 4, 5, 3, 4, 5, 6, 7].map((n) => ctx.cloud('setNSubjects', {pmid: '424242', n}, carol.session)));
   ns.forEach((r) => assert.strictEqual(r.status, 200, r.text));
   const nrows = (await ctx.rest('GET', '/classes/Vote?where=' + encodeURIComponent(JSON.stringify({user: carol.id, kind: 'nsubjects'})), {master: true})).json.results;
