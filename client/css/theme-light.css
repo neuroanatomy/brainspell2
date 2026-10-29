@@ -1,0 +1,45 @@
+/*
+ * theme-light.css - a light theme in the spirit of the original Brainspell. It overrides TOKENS ONLY
+ * (never a rule), is activated by <html data-theme="light"> (see annotation/theme.js) and must be linked
+ * after theme.css. To make another theme copy this file and change the values.
+ *
+ * The original's orange (#ed8000) is only 2.5:1 on white, so it is used for FILLS (primary buttons, with
+ * dark text); links, the focus ring and pressed states use a darker orange (4.8:1).
+ */
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --color-bg: #fff;
+  --color-surface: #faf7f2;
+  --color-surface-raised: #ebe1d3;       /* the original's table header */
+  --color-header-bg: #f2ede5;
+  --color-field-bg: #fff;
+  --color-selected-bg: #fde8cc;
+  --color-new-row-bg: #e6f2e6;
+
+  --color-text: #444;
+  --color-text-muted: #5f5f5f;
+  --color-text-on-accent: #1a1a1a;
+  --color-link: #a85600;
+
+  --color-border: #d9cfc0;
+  --color-border-control: #7a7a7a;
+  --color-accent: #a85600;
+  --color-focus-ring: #a85600;
+
+  --color-control-bg: #fff;
+  --color-control-bg-hover: #f3ece1;
+  --color-primary-bg: #ed8000;
+  --color-primary-bg-hover: #ff9626;
+
+  --color-vote-agree: #1b7a33;
+  --color-vote-tie: #8a6100;
+  --color-vote-disagree: #b3261e;
+  --color-danger: #b3261e;
+  --color-success: #1b7a33;
+
+  --filter-header-icon: invert(0.7);
+  --backdrop-filter: contrast(55%) brightness(185%) sepia(15%) saturate(30%);
+  --shadow-popup: 0 4px 16px rgb(0 0 0 / 25%);
+}

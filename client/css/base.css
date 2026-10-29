@@ -1,0 +1,171 @@
+/*
+ * base.css - element defaults, built only from the tokens of theme.css. No class-specific rules except the
+ * button variants (.btn-primary, .btn-quiet), which belong to the elements they style.
+ */
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-family-heading);
+  line-height: var(--line-height-tight);
+  color: var(--color-text);
+}
+
+h1 {
+  font-size: var(--font-size-lg);
+}
+
+h2 {
+  font-size: var(--font-size-xl);
+  margin: var(--space-5) 0 var(--space-2);
+}
+
+h3,
+h4 {
+  font-size: var(--font-size-lg);
+  margin: var(--space-3) 0 var(--space-1);
+}
+
+p {
+  margin: var(--space-2) 0;
+}
+
+a {
+  color: var(--color-link);
+}
+
+ul,
+ol {
+  margin: var(--space-2) 0;
+  padding-left: var(--space-5);
+}
+
+small {
+  font-size: var(--font-size-xs);
+}
+
+strong,
+b {
+  font-weight: var(--font-weight-bold);
+}
+
+table {
+  border-collapse: collapse;
+}
+
+th {
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-bold);
+  text-align: center;
+  padding: var(--space-1) var(--space-2);
+}
+
+td {
+  padding: var(--space-1) var(--space-2);
+}
+
+/* ---- controls: ONE base style so that nothing falls back to the browser's light defaults ---- */
+button,
+input,
+textarea,
+select {
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-tight);
+  color: var(--color-text);
+  background: var(--color-control-bg);
+  border: var(--border-width) solid var(--color-border-control);
+  border-radius: var(--radius);
+  min-height: var(--control-min-height);
+  padding: var(--space-1) var(--space-2);
+  transition: background-color var(--duration-fast), border-color var(--duration-fast);
+}
+
+button {
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: var(--color-control-bg-hover);
+}
+
+input,
+textarea,
+select {
+  background: var(--color-field-bg);
+}
+
+textarea {
+  resize: vertical;
+}
+
+/* bigger targets for fingers */
+@media (pointer: coarse) {
+  button,
+  input,
+  select {
+    min-height: var(--hit-area-touch);
+  }
+}
+
+::placeholder {
+  color: var(--color-text-muted);
+  opacity: 1;
+}
+
+button:disabled,
+input:disabled,
+textarea:disabled,
+select:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* variants: primary (filled accent), secondary (the default above), quiet (no fill until hovered) */
+.btn-primary {
+  background: var(--color-primary-bg);
+  border-color: var(--color-primary-bg);
+  color: var(--color-text-on-accent);
+  font-weight: var(--font-weight-bold);
+}
+
+button.btn-primary:hover:not(:disabled) {
+  background: var(--color-primary-bg-hover);
+}
+
+.btn-quiet {
+  background: transparent;
+  border-color: transparent;
+}
+
+button.btn-quiet:hover:not(:disabled),
+button.btn-quiet:focus-visible {
+  background: var(--color-control-bg-hover);
+  border-color: var(--color-border-control);
+}
+
+:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* the only !important of the style sheets: hidden means hidden, whatever a component says */
+[hidden] {
+  display: none !important;
+}

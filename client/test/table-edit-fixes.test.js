@@ -138,7 +138,7 @@ test("C13: without any 4-value row there is no Extra column", async () => {
 test("C14: titles/captions with < and & survive a save and a reload exactly as typed", async () => {
   for (const typed of ["Faces<Houses contrast", "A &amp; B", "x<y>z", "&lt;b&gt;", "plain & simple", "a < b && c > d"]) {
     const s = await setup();
-    await s.root.buttons("Edit title")[0].dispatch("click");
+    await s.root.byLabel("Edit title")[0].dispatch("click");
     s.root.byTag("input")[0].value = typed;
     await s.root.buttons("Save")[0].dispatch("click");
     await flush();
@@ -147,11 +147,11 @@ test("C14: titles/captions with < and & survive a save and a reload exactly as t
     assert.equal(decodeEntitiesOnly(stored), typed);
     // "reload": a new editor on the stored experiment; its edit box starts with the typed text
     const again = s.make((await s.mock.getArticle("12345")).Experiments[0]);
-    await again.root.buttons("Edit title")[0].dispatch("click");
+    await again.root.byLabel("Edit title")[0].dispatch("click");
     assert.equal(again.root.byTag("input")[0].value, typed);
     // caption too
     await again.root.buttons("Cancel")[0].dispatch("click");
-    await again.root.buttons("Edit caption")[0].dispatch("click");
+    await again.root.byLabel("Edit caption")[0].dispatch("click");
     again.root.byTag("textarea")[0].value = typed;
     await again.root.buttons("Save")[0].dispatch("click");
     await flush();

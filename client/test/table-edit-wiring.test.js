@@ -40,13 +40,13 @@ const run = async (query) => {
 test("article page, anonymous: no editing control", async () => {
   const {root} = await run("?pmid=12345&mock=1&latency=0");
   assert.equal(root.findClass("te-root").every((n) => n.hidden), true);
-  assert.equal(root.buttons("Edit title").length, 0);
+  assert.equal(root.byLabel("Edit title").length, 0);
   assert.equal(root.buttons("Import from text").length, 0);
 });
 
 test("article page, logged in: edit a coordinate end to end (rev from the annotations, rebuilt viewer)", async () => {
   const {root, viewers} = await run("?pmid=12345&mock=1&as=alice&latency=0");
-  assert.equal(root.buttons("Edit title").length, 3, "also for the empty experiment");
+  assert.equal(root.byLabel("Edit title").length, 3, "also for the empty experiment");
   const before = viewers.length;
   const tbody = root.findClass("te-table")[0].byTag("tbody")[0];
   await tbody.children[0].dispatch("click");
@@ -121,7 +121,7 @@ test("C3: another user inserts a row between the article fetch and getAnnotation
   assert.equal(rows.length, 5, "the page shows the rows it fetched (without the inserted one)");
   assert.equal(rows[0].children[0].textContent, "-42");
   const fetches = stats.fetches;
-  await rows[0].buttons("-")[0].dispatch("click"); // delete what the user sees as the first row
+  await rows[0].byLabel("Delete this row")[0].dispatch("click"); // delete what the user sees as the first row
   await flush(10);
   const art = await mock.getArticle("12345");
   assert.equal(art.Experiments[0].locations.length, 6, "nothing was deleted");
@@ -131,7 +131,7 @@ test("C3: another user inserts a row between the article fetch and getAnnotation
   // after the reload the page shows the inserted row and a delete works
   const again = root.findClass("te-table")[0].byTag("tbody")[0].children;
   assert.equal(again.length, 6);
-  await again[0].buttons("-")[0].dispatch("click");
+  await again[0].byLabel("Delete this row")[0].dispatch("click");
   await flush(10);
   assert.equal((await mock.getArticle("12345")).Experiments[0].locations.length, 5);
 });

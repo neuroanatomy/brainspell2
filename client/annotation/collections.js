@@ -265,7 +265,7 @@ export const mountSearchSelection = ({list, toolbar, call = api.call}) => {
   const none = el("button", {type: "button"}, "Select none");
   const menu = createAddMenu({selection, call});
   const boxes = new Map(); // pmid -> checkbox
-  const items = () => list.children.filter((li) => li.getAttribute("data-pmid"));
+  const items = () => Array.from(list.children).filter((li) => li.getAttribute("data-pmid"));
 
   const sync = () => {
     boxes.forEach((box, pmid) => {
@@ -284,7 +284,7 @@ export const mountSearchSelection = ({list, toolbar, call = api.call}) => {
     toolbar.hidden = !user;
     for (const li of items()) {
       const pmid = li.getAttribute("data-pmid");
-      const slot = li.children.find((c) => c.classList.contains("col-select"));
+      const slot = Array.from(li.children).find((c) => c.classList.contains("col-select"));
       if (!slot) {
         continue;
       }

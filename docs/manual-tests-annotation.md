@@ -12,6 +12,16 @@ Mock URL parameters (see `annotation/api.js`): `mock=1` anonymous; `as=alice` lo
 Fixture articles: `12345` (legacy votes, 3 experiments, one empty, hostile strings) and `67890`
 (plain). Search and the home page need a real server (the mock covers the article page only).
 
+## UI round (read first): what changed in the steps below
+
+The look was redone (see `client/css/README.md`). In the steps of this document:
+
+* A MeSH heading or an ontology tag is a **chip** (a button showing only its name, a coloured band on its left for the balance of votes, and "+a -d" when it has votes). **There are no inline Agree / Disagree buttons**: click the chip (Enter or Space) and one small popup opens under it with the counts (▲ ▼), **Agree**, **Disagree**, **Retract** (disabled while you have no vote; the button matching your vote is pressed) and Close. Wherever a step says "click Agree next to X", open X's popup and click Agree there.
+* The popup closes with Esc (focus goes back to the chip), with a click outside, with Close and when another chip is opened. Anonymous users see the counts and "Log in to vote".
+* "Table is correct" is one segmented control `[✓ Yes n | ✗ No n]`; clicking the pressed half retracts. The space is `[MNI n | Talairach n]` with the same rule. There is no separate Retract button for them.
+* "Add tag" is the dashed chip "+ Add tag".
+* Checks to add: Tab reaches every chip, the focus ring is visible, the popup is not cut off at 390px wide (it becomes a sheet at the bottom), `?theme=light` gives the light theme and the choice is remembered on the next page.
+
 ## A. Anonymous visitor (`?pmid=12345&mock=1`)
 
 | # | Step | Expected |

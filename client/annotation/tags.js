@@ -3,9 +3,10 @@
  * plan 3.4, so only tags with at least one vote come back), a popup with the vote controls and the
  * link to the term, and a picker to add a tag from the three ontologies using listConcepts.
  */
-import {el, setChildren, text, isSafeUrl} from "./dom.js";
+import {el, setChildren, isSafeUrl} from "./dom.js";
 import {createStatus, runAction} from "./context.js";
-import {balanceClass, voteControls, applyVoteResult} from "./votes.js";
+import {applyVoteResult} from "./votes.js";
+import {createVoteChip} from "./vote-chip.js";
 
 export const ONTOLOGY_LABELS = {
   cognitive: "Cognitive Atlas concepts",
@@ -59,19 +60,18 @@ const loadConcept = (ctx, ontology, name) => {
 };
 
 export const renderTags = (ctx, experimentId) => {
-  const ui = {open: null, picker: false, ontology: "cognitive", filter: "", concepts: null, conceptsError: null};
+  const ui = {picker: false, ontology: "cognitive", filter: "", concepts: null, conceptsError: null};
   const chips = el("div", {class: "tag-chips"});
-  const popup = el("div", {class: "tag-popup"});
   const picker = el("div", {class: "tag-picker"});
-  const addBtn = el("button", {type: "button", class: "tag-add", onclick: () => {
+  const addBtn = el("button", {type: "button", class: "tag-add chip-add btn-quiet", "aria-expanded": "false", onclick: () => {
     ui.picker = !ui.picker;
     if (ui.picker) {
       loadList();
     }
     update();
-  }}, "Add tag");
+  }}, "+ Add tag");
   const pickerStatus = createStatus();
-  const root = el("div", {class: "tags"}, el("span", {class: "label"}, "Tags: "), chips, addBtn, popup, picker);
+  const root = el("div", {class: "tags"}, el("span", {class: "label"}, "Tags: "), chips, addBtn, picker);
 
   // --- picker (built once; only the list is redrawn while typing) ---------------------------
   const filterInput = el("input", {type: "text", class: "tag-filter", placeholder: "Filter terms…", "aria-label": "Filter terms",
@@ -143,56 +143,38 @@ export const renderTags = (ctx, experimentId) => {
     drawList();
   };
 
-  // --- chips and popup -------------------------------------------------------------------------
-  const drawPopup = (entry) => {
-    if (!entry) {
-      popup.hidden = true;
-      setChildren(popup);
-
-      return;
+  // --- chips and their popups (a chip keeps its popup state across redraws: they are cached by key) ---------
+  const comps = new Map();
+  const keyOf = (t) => `${t.ontology}|${t.tag}`;
+  const chipFor = (t) => {
+    const k = keyOf(t);
+    if (!comps.has(k)) {
+      comps.set(k, createVoteChip(ctx, {kind: "tag", experimentId, ontology: t.ontology, tag: t.tag}, {
+        subtitle: ONTOLOGY_LABELS[t.ontology] || t.ontology,
+        loadInfo: () => loadConcept(ctx, t.ontology, t.tag),
+        renderInfo: (c) => [
+          c.definition ? el("p", null, c.definition) : null,
+          c.url && /^https?:/i.test(c.url) && isSafeUrl(c.url) ? el("a", {href: c.url, target: "_blank", rel: "noopener"}, "Term page") : null
+        ]
+      }));
     }
-    popup.hidden = false;
-    const info = el("div", {class: "tag-info"});
-    setChildren(popup,
-      el("strong", null, entry.tag), " ", el("span", {class: "muted"}, ONTOLOGY_LABELS[entry.ontology] || entry.ontology),
-      el("div", null, voteControls(ctx, {kind: "tag", experimentId, ontology: entry.ontology, tag: entry.tag})),
-      info,
-      el("button", {type: "button", class: "close", onclick: () => {
-        ui.open = null;
-        update();
-      }}, "Close"));
-    const key = ui.open;
-    loadConcept(ctx, entry.ontology, entry.tag).then((c) => {
-      if (ui.open !== key) {
-        return;
-      }
-      setChildren(info,
-        c.definition ? el("p", null, c.definition) : null,
-        c.url && /^https?:/i.test(c.url) && isSafeUrl(c.url) ? el("a", {href: c.url, target: "_blank", rel: "noopener"}, "Term page") : null);
-    }).catch(() => {
-      setChildren(info, el("span", {class: "muted"}, "Term details not available"));
-    });
+
+    return comps.get(k);
   };
 
   const update = () => {
     const tags = tagsOf(ctx.ann, experimentId);
-    const openEntry = tags.find((t) => `${t.ontology}|${t.tag}` === ui.open) || null;
-    if (!openEntry) {
-      ui.open = null;
+    const keys = new Set(tags.map(keyOf));
+    for (const [k, comp] of comps) {
+      if (!keys.has(k)) {
+        comp.destroy(); // the tag fell to zero votes: it is not shown any more
+        comps.delete(k);
+      }
     }
-    setChildren(chips,
-      tags.length ? tags.map((t) => el("button", {type: "button",
-        class: `tag chip ${balanceClass(t.agree, t.disagree)}${t.mine ? " mine" : ""}`,
-        title: `${ONTOLOGY_LABELS[t.ontology] || t.ontology}: ${t.agree} agree, ${t.disagree} disagree`,
-        "aria-expanded": String(`${t.ontology}|${t.tag}` === ui.open),
-        onclick: () => {
-          const k = `${t.ontology}|${t.tag}`;
-          ui.open = ui.open === k ? null : k;
-          update();
-        }}, t.tag, text(" "), el("span", {class: "counts"}, `+${t.agree} -${t.disagree}`)))
-        : el("span", {class: "muted"}, "none"));
-    drawPopup(openEntry);
+    tags.forEach((t) => chipFor(t).update());
+    setChildren(chips, tags.length ? tags.map((t) => chipFor(t).node) : el("span", {class: "muted"}, "none"));
     addBtn.hidden = !ctx.canWrite();
+    addBtn.setAttribute("aria-expanded", String(ctx.canWrite() && ui.picker));
     picker.hidden = !(ctx.canWrite() && ui.picker);
   };
 

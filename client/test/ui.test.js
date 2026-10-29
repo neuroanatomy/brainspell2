@@ -1,10 +1,11 @@
-import test from "node:test";
+import test, {beforeEach} from "node:test";
 import assert from "node:assert/strict";
-import {makeDocument, flush} from "./fake-dom.js";
-import {setDocument} from "../annotation/dom.js";
+import {makeDocument, flush, FNode} from "./fake-dom.js";
+import {setDocument, getDocument} from "../annotation/dom.js";
 import {createMockApi} from "../annotation/mock-api.js";
 import {createContext} from "../annotation/context.js";
 import {renderMesh, renderTableOk, balanceClass, findVote, applyVoteResult} from "../annotation/votes.js";
+import * as chipModule from "../annotation/vote-chip.js";
 import {renderTags, filterConcepts, tagsOf} from "../annotation/tags.js";
 import {renderMeta, parseSubjects} from "../annotation/meta.js";
 import {renderComments, validComment, formatDate} from "../annotation/comments.js";
@@ -12,6 +13,8 @@ import {loginHint} from "../annotation/context.js";
 
 const PMID = "12345";
 const MESH = [{name: "Brain"}, {name: "Attention"}, {name: "<img src=x onerror=alert(1)>"}];
+
+beforeEach(() => chipModule._reset());
 
 const setup = async ({user = "alice", wrap = (c) => c, mockOpts = {}} = {}) => {
   setDocument(makeDocument());
@@ -71,9 +74,10 @@ test("anonymous: counts visible, no write control anywhere, hint shown", async (
   const hint = loginHint(ctx);
   assert.equal(hint.hidden, false);
   assert.equal(hint.textContent, "Log in to contribute");
-  for (const n of [mesh, ok, meta]) {
+  for (const n of [ok, meta]) {
     assert.equal(n.buttons().length, 0, "no buttons");
   }
+  assert.ok(mesh.buttons().every((b) => b.classList.contains("chip")), "mesh: only the chips (they open a read-only popup)");
   // the only buttons in tags are the existing chips (read-only popups); "Add tag" is hidden
   assert.deepEqual(tags.buttons().map((b) => b.textContent.split(" ")[0]), ["working"]);
   assert.equal(tags.buttons("Add tag").length, 0);
@@ -85,89 +89,191 @@ test("anonymous: counts visible, no write control anywhere, hint shown", async (
   assert.match(meta.textContent, /Number of subjects: 20/);
   // the popup of a tag is readable by anonymous visitors, without vote buttons
   await tags.buttons("working")[0].dispatch("click");
-  assert.equal(tags.findClass("tag-popup")[0].buttons("Agree").length, 0);
-  assert.match(tags.findClass("tag-popup")[0].textContent, /Agree 3/);
+  const popup = tags.findClass("vote-popup")[0];
+  assert.equal(popup.buttons("Agree").length, 0);
+  assert.match(popup.textContent, /3 agree/);
+  assert.match(popup.textContent, /Log in to vote/);
 });
 
-test("MeSH: hostile heading names are text, controls update from the server answer", async () => {
-  const {ctx, mock} = await setup();
+const chipOf = (root, label) => root.findClass("chip").find((c) => c.findClass("chip-label")[0] && c.findClass("chip-label")[0].textContent === label);
+const popupOf = (chip) => chip.parentNode.findClass("vote-popup")[0];
+
+test("MeSH: hostile heading names are text; a chip shows only the label, no inline vote buttons", async () => {
+  const {ctx} = await setup();
   const mesh = renderMesh(ctx, MESH);
   assert.deepEqual(mesh.all(() => true).filter((n) => ["IMG", "SCRIPT"].includes(n.tagName)), []);
   assert.ok(mesh.textContent.includes("<img src=x onerror=alert(1)>"));
-  const brain = mesh.findClass("mesh-item")[0];
-  assert.equal(brain.buttons("Retract").length, 0);
-  await brain.buttons("Agree")[0].dispatch("click");
-  await flush();
-  assert.equal(findVote(ctx.ann, "mesh", -1, null, "Brain").agree, 1);
-  assert.match(brain.textContent, /Agree 1/);
-  assert.equal(brain.findClass("tag")[0].className, "tag bal-good");
-  assert.ok(brain.buttons("Agree")[0].classList.contains("mine"));
-  assert.equal(brain.buttons("Retract").length, 1);
-  await brain.buttons("Disagree")[0].dispatch("click");
-  await flush();
-  assert.match(brain.textContent, /Agree 0/);
-  assert.match(brain.textContent, /Disagree 1/);
-  await brain.buttons("Retract")[0].dispatch("click");
-  await flush();
-  assert.equal(findVote(ctx.ann, "mesh", -1, null, "Brain").disagree, 0);
-  assert.equal(brain.buttons("Retract").length, 0);
-  assert.equal((await mock.call("getAnnotations", {pmid: PMID})).votes.find((v) => v.tag === "Brain").mine, 0);
+  assert.equal(mesh.buttons("Agree").length, 0, "no Agree button until a popup is open");
+  const brain = chipOf(mesh, "Brain");
+  assert.equal(brain.tagName, "BUTTON");
+  assert.equal(brain.getAttribute("aria-haspopup"), "dialog");
+  assert.equal(brain.getAttribute("aria-expanded"), "false");
+  assert.equal(brain.findClass("counts")[0].hidden, true, "no count without votes");
+  assert.ok(brain.classList.contains("bal-none"));
 });
 
-test("pending state disables the buttons; nothing changes before the answer", async () => {
+test("popup: opens under the chip, vote from the server's answer, flip, retract, balance band and count", async () => {
+  const {ctx, mock} = await setup();
+  const mesh = renderMesh(ctx, MESH);
+  const brain = chipOf(mesh, "Brain");
+  await brain.dispatch("click");
+  const popup = popupOf(brain);
+  assert.equal(popup.hidden, false);
+  assert.equal(popup.getAttribute("role"), "dialog");
+  assert.match(popup.getAttribute("aria-label"), /Brain/);
+  assert.equal(brain.getAttribute("aria-expanded"), "true");
+  assert.equal(FNode.active, popup, "focus moves into the popup");
+  assert.equal(popup.buttons("Retract")[0].disabled, true, "nothing to retract yet");
+  await popup.buttons("Agree")[0].dispatch("click");
+  await flush();
+  assert.equal(findVote(ctx.ann, "mesh", -1, null, "Brain").agree, 1);
+  assert.match(popup.textContent, /1 agree/);
+  assert.match(popup.textContent, /including you/);
+  assert.equal(popup.buttons("Agree")[0].getAttribute("aria-pressed"), "true");
+  assert.ok(popup.buttons("Agree")[0].classList.contains("pressed"));
+  assert.equal(popup.buttons("Retract")[0].disabled, false);
+  assert.ok(brain.classList.contains("bal-good"));
+  assert.equal(brain.findClass("counts")[0].textContent, "+1 \u22120");
+  assert.equal(brain.findClass("counts")[0].hidden, false);
+  await popup.buttons("Disagree")[0].dispatch("click");
+  await flush();
+  assert.match(popup.textContent, /0 agree/);
+  assert.match(popup.textContent, /1 disagree/);
+  assert.ok(brain.classList.contains("bal-bad"));
+  await popup.buttons("Retract")[0].dispatch("click");
+  await flush();
+  assert.equal(findVote(ctx.ann, "mesh", -1, null, "Brain").disagree, 0);
+  assert.equal(popup.buttons("Retract")[0].disabled, true);
+  assert.equal((await mock.call("getAnnotations", {pmid: PMID})).votes.find((v) => v.tag === "Brain").mine, 0);
+  // clicking the pressed button again retracts too
+  await popup.buttons("Agree")[0].dispatch("click"); await flush();
+  await popup.buttons("Agree")[0].dispatch("click"); await flush();
+  assert.equal(findVote(ctx.ann, "mesh", -1, null, "Brain").agree, 0);
+});
+
+test("popup: Escape, click outside, Close and opening another chip close it; focus returns to the chip on Escape and Close", async () => {
+  const {ctx} = await setup();
+  const mesh = renderMesh(ctx, MESH);
+  const doc = getDocument();
+  const brain = chipOf(mesh, "Brain");
+  const attention = chipOf(mesh, "Attention");
+  await brain.dispatch("click");
+  await doc.dispatch("keydown", {key: "Escape"});
+  assert.equal(popupOf(brain).hidden, true);
+  assert.equal(brain.getAttribute("aria-expanded"), "false");
+  assert.equal(FNode.active, brain, "focus back on the chip");
+  await brain.dispatch("click");
+  await doc.dispatch("click", {target: doc.createElement("div")});
+  assert.equal(popupOf(brain).hidden, true, "click outside");
+  await brain.dispatch("click");
+  await doc.dispatch("click", {target: popupOf(brain).buttons("Close")[0]});
+  assert.equal(popupOf(brain).hidden, false, "a click inside the popup does not close it");
+  await popupOf(brain).buttons("Close")[0].dispatch("click");
+  assert.equal(popupOf(brain).hidden, true);
+  assert.equal(FNode.active, brain);
+  // one at a time
+  await brain.dispatch("click");
+  await attention.dispatch("click");
+  assert.equal(popupOf(brain).hidden, true);
+  assert.equal(popupOf(attention).hidden, false);
+  assert.equal(mesh.findClass("vote-popup").filter((p) => !p.hidden).length, 1);
+  // clicking the open chip again closes it
+  await attention.dispatch("click");
+  assert.equal(popupOf(attention).hidden, true);
+});
+
+test("popup, anonymous: read-only counts and a hint, no vote buttons", async () => {
+  const {ctx} = await setup({user: null});
+  const mesh = renderMesh(ctx, MESH);
+  const brain = chipOf(mesh, "Brain");
+  await brain.dispatch("click");
+  const popup = popupOf(brain);
+  assert.deepEqual(popup.buttons().map((b) => b.textContent), ["Close"]);
+  assert.match(popup.textContent, /0 agree/);
+  assert.match(popup.textContent, /Log in to vote/);
+});
+
+test("pending state disables the popup buttons; nothing changes before the answer", async () => {
   let release;
   const gate = new Promise((r) => { release = r; });
   const {ctx} = await setup({wrap: (call) => async (n, p) => { if (n === "vote") { await gate; } return call(n, p); }});
   const mesh = renderMesh(ctx, MESH);
-  const item = mesh.findClass("mesh-item")[0];
-  const p = item.buttons("Agree")[0].dispatch("click");
+  const brain = chipOf(mesh, "Brain");
+  await brain.dispatch("click");
+  const popup = popupOf(brain);
+  const p = popup.buttons("Agree")[0].dispatch("click");
   await flush();
-  assert.match(item.findClass("ann-status")[0].textContent, /Saving/);
-  assert.ok(item.byTag("button").every((b) => b.disabled));
+  assert.match(popup.findClass("ann-status")[0].textContent, /Saving/);
+  assert.ok(popup.byTag("button").every((b) => b.disabled));
   assert.equal(findVote(ctx.ann, "mesh", -1, null, "Brain").agree, 0, "not optimistic");
   release();
   await p;
   await flush();
   assert.equal(findVote(ctx.ann, "mesh", -1, null, "Brain").agree, 1);
-  assert.ok(item.byTag("button").every((b) => !b.disabled));
-  assert.equal(item.findClass("ann-status")[0].textContent, "");
+  assert.equal(popup.findClass("ann-status")[0].textContent, "");
+  assert.equal(FNode.active, popup.buttons("Agree")[0], "focus stays on the button used");
 });
 
 for (const [code, re] of [[155, /Too many actions/], [142, /Not accepted/], [206, /session has expired/]]) {
-  test(`vote error ${code} is shown and the counts stay as the server last said`, async () => {
+  test(`vote error ${code} is shown in the popup and the counts stay as the server last said`, async () => {
     const {ctx} = await setup({mockOpts: {failCode: code}});
-    const ok = renderTableOk(ctx, 1);
-    await ok.buttons("Yes")[0].dispatch("click");
+    const mesh = renderMesh(ctx, MESH);
+    const brain = chipOf(mesh, "Brain");
+    await brain.dispatch("click");
+    const popup = popupOf(brain);
+    await popup.buttons("Agree")[0].dispatch("click");
     await flush();
-    assert.match(ok.findClass("ann-status")[0].textContent, re);
-    assert.equal(findVote(ctx.ann, "tableOk", 1, null, "ok").agree, 2);
-    assert.ok(ok.byTag("button").every((b) => !b.disabled));
+    assert.match(popup.findClass("ann-status")[0].textContent, re);
+    assert.equal(findVote(ctx.ann, "mesh", -1, null, "Brain").agree, 0);
+    assert.ok(popup.byTag("button").every((b) => !b.disabled || b.textContent === "Retract"));
   });
 }
 
-test("table correct: yes / no / retract from the server totals", async () => {
+test("table correct: a segmented control; yes / no / click again to retract, from the server totals", async () => {
   const {ctx} = await setup();
   const ok = renderTableOk(ctx, 1);
-  await ok.buttons("Yes")[0].dispatch("click"); await flush();
+  const group = ok.findClass("segmented")[0];
+  assert.equal(group.getAttribute("role"), "group");
+  assert.equal(group.getAttribute("aria-label"), "Table is correct");
+  const [yes, no] = group.byTag("button");
+  assert.equal(yes.textContent, "\u2713 Yes 2");
+  assert.equal(no.textContent, "\u2717 No 1");
+  assert.equal(yes.getAttribute("aria-pressed"), "false");
+  await yes.dispatch("click"); await flush();
   assert.match(ok.textContent, /Yes 3/);
-  await ok.buttons("No")[0].dispatch("click"); await flush();
+  assert.equal(ok.byTag("button")[0].getAttribute("aria-pressed"), "true");
+  await ok.byTag("button")[1].dispatch("click"); await flush();
   assert.match(ok.textContent, /Yes 2/);
   assert.match(ok.textContent, /No 2/);
-  await ok.buttons("Retract")[0].dispatch("click"); await flush();
+  assert.equal(ok.byTag("button")[1].getAttribute("aria-pressed"), "true");
+  assert.equal(ok.buttons("Retract").length, 0, "no Retract button: click the pressed one");
+  await ok.byTag("button")[1].dispatch("click"); await flush();
   assert.match(ok.textContent, /No 1/);
+  assert.equal(ok.byTag("button")[1].getAttribute("aria-pressed"), "false");
+});
+
+test("table correct: errors show next to the control", async () => {
+  const {ctx} = await setup({mockOpts: {failCode: 155}});
+  const ok = renderTableOk(ctx, 1);
+  await ok.byTag("button")[0].dispatch("click"); await flush();
+  assert.match(ok.findClass("ann-status")[0].textContent, /Too many actions/);
+  assert.equal(findVote(ctx.ann, "tableOk", 1, null, "ok").agree, 2);
 });
 
 test("tags: chips with counts, add a tag from the picker with a filter", async () => {
   const {ctx} = await setup();
   const tags = renderTags(ctx, 1);
   assert.match(tags.textContent, /working memory/);
-  assert.match(tags.textContent, /\+3 -1/);
+  assert.match(tags.textContent, /\+3 \u22121/);
   assert.doesNotMatch(tags.textContent, /Stroop/);
   const picker = tags.findClass("tag-picker")[0];
   assert.equal(picker.hidden, true);
-  await tags.buttons("Add tag")[0].dispatch("click");
+  const add = tags.buttons("Add tag")[0];
+  assert.equal(add.textContent, "+ Add tag");
+  await add.dispatch("click");
   await flush();
   assert.equal(picker.hidden, false);
+  assert.equal(add.getAttribute("aria-expanded"), "true");
   assert.deepEqual(picker.buttons("Cognitive Atlas").map((b) => b.textContent), ["Cognitive Atlas concepts", "Cognitive Atlas tasks"]);
   assert.ok(picker.buttons("emotion").length === 1);
   const filter = picker.byTag("input")[0];
@@ -178,7 +284,7 @@ test("tags: chips with counts, add a tag from the picker with a filter", async (
   await flush();
   assert.equal(picker.hidden, true);
   assert.equal(findVote(ctx.ann, "tag", 1, "cognitive", "attention").agree, 1);
-  assert.match(tags.findClass("tag-chips")[0].textContent, /attention \+1 -0/);
+  assert.match(tags.findClass("tag-chips")[0].textContent, /attention\+1 \u22120/);
   // another ontology
   await tags.buttons("Add tag")[0].dispatch("click"); await flush();
   await picker.buttons("tasks")[0].dispatch("click"); await flush();
@@ -186,22 +292,27 @@ test("tags: chips with counts, add a tag from the picker with a filter", async (
   assert.equal(picker.buttons("emotion").length, 0);
 });
 
-test("tags: popup with vote controls; retracting the only vote removes the chip", async () => {
+test("tags: popup with vote controls and the term link; retracting the only vote removes the chip and closes the popup", async () => {
   const {ctx} = await setup();
   await ctx.call("vote", {pmid: PMID, experimentId: 1, kind: "tag", ontology: "cognitive", tag: "emotion", value: 1})
     .then((r) => { applyVoteResult(ctx.ann, r); });
   const tags = renderTags(ctx, 1);
-  const chip = tags.findClass("chip").find((c) => c.textContent.startsWith("emotion"));
+  const chip = chipOf(tags, "emotion");
   await chip.dispatch("click");
-  const popup = tags.findClass("tag-popup")[0];
+  const popup = popupOf(chip);
   assert.equal(popup.hidden, false);
   assert.match(popup.textContent, /Cognitive Atlas concepts/);
   await flush();
-  assert.ok(popup.findClass("tag-info")[0].byTag("a")[0], "link to the term");
+  assert.ok(popup.findClass("vote-info")[0].byTag("a")[0], "link to the term");
+  // the popup survives a redraw caused by another vote
+  await popup.buttons("Disagree")[0].dispatch("click"); await flush();
+  assert.equal(popup.hidden, false);
+  assert.match(popup.textContent, /1 disagree/);
   await popup.buttons("Retract")[0].dispatch("click"); await flush();
   assert.equal(findVote(ctx.ann, "tag", 1, "cognitive", "emotion"), null);
-  assert.equal(popup.hidden, true);
-  assert.doesNotMatch(tags.textContent, /emotion \+/);
+  assert.equal(chipOf(tags, "emotion"), undefined);
+  assert.doesNotMatch(tags.textContent, /emotion/);
+  assert.equal(chipModule.openChip(), null);
 });
 
 test("tags: picker error is shown (rate limit) and no tag is added", async () => {
@@ -227,7 +338,9 @@ test("meta: space and number of subjects", async () => {
   const meta = renderMeta(ctx);
   await meta.buttons("Talairach")[0].dispatch("click"); await flush();
   assert.match(meta.textContent, /Talairach 2/);
-  assert.ok(meta.buttons("Talairach")[0].classList.contains("mine"));
+  assert.ok(meta.buttons("Talairach")[0].classList.contains("pressed"));
+  assert.equal(meta.buttons("Talairach")[0].getAttribute("aria-pressed"), "true");
+  assert.equal(meta.findClass("segmented")[0].getAttribute("aria-label"), "Stereotaxic space");
   await meta.buttons("Talairach")[0].dispatch("click"); await flush(); // click again retracts
   assert.match(meta.textContent, /Talairach 1/);
   const input = meta.byTag("input")[0];
@@ -269,17 +382,19 @@ test("comments: post, hostile text stays text, errors keep the draft", async () 
   assert.equal((await mock.call("getAnnotations", {pmid: PMID})).comments.length, 1);
 });
 
-test("logging in and out switches the write controls", async () => {
+test("logging in and out switches the write controls (an open popup follows)", async () => {
   const {ctx, state} = await setup({user: null});
   const mesh = renderMesh(ctx, MESH);
   const hint = loginHint(ctx);
-  assert.equal(mesh.buttons().length, 0);
+  const brain = chipOf(mesh, "Brain");
+  await brain.dispatch("click");
+  assert.equal(popupOf(brain).buttons("Agree").length, 0);
   state.user = {id: "u_alice", login: "alice"};
   ctx.notify();
-  assert.equal(mesh.buttons("Agree").length, 3);
+  assert.equal(popupOf(brain).buttons("Agree").length, 1);
   assert.equal(hint.hidden, true);
   state.user = null;
   ctx.notify();
-  assert.equal(mesh.buttons().length, 0);
+  assert.equal(popupOf(brain).buttons("Agree").length, 0);
   assert.equal(hint.hidden, false);
 });

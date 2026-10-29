@@ -1,0 +1,570 @@
+/*
+ * components.css - reusable pieces, built from the tokens of theme.css and the element defaults of
+ * base.css. One section per component. (Rewritten per stage; see README.md for how to add a component.)
+ */
+
+/* ==== status-message ============================================================================== */
+.muted {
+  color: var(--color-text-muted);
+}
+
+.error,
+.ann-status.error,
+.col-status.error {
+  color: var(--color-danger);
+}
+
+.ann-status {
+  margin-left: var(--space-1-5);
+  font-size: var(--font-size-xs);
+}
+
+.ann-status.pending,
+.col-status.pending {
+  color: var(--color-text-muted);
+}
+
+.col-status.ok {
+  color: var(--color-success);
+}
+
+.login-hint {
+  margin: var(--space-4) 0 0;
+  padding: var(--space-1-5) var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+/* ==== tag-chip: MeSH headings and ontology tags ======================================================== */
+.chips,
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1-5);
+}
+
+.tag-chips {
+  display: contents;
+}
+
+.chip-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+/* the left band shows the balance of votes; the "+a -d" count is the second cue (colour is never the only one) */
+button.tag.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  min-height: var(--hit-area);
+  padding: 0 var(--space-2);
+  border-left-width: var(--border-width-band);
+  border-left-color: var(--color-border-control);
+  background: var(--color-surface-raised);
+  text-align: left;
+}
+
+button.tag.chip.bal-good,
+button.tag.chip.bal-ok {
+  border-left-color: var(--color-vote-agree);
+}
+
+button.tag.chip.bal-tie {
+  border-left-color: var(--color-vote-tie);
+}
+
+button.tag.chip.bal-poor,
+button.tag.chip.bal-bad {
+  border-left-color: var(--color-vote-disagree);
+}
+
+button.tag.chip[aria-expanded="true"],
+button.tag.chip.mine {
+  border-top-color: var(--color-accent);
+  border-right-color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+}
+
+.chip .counts {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* "+ Add tag": a dashed, quiet chip */
+button.chip-add {
+  min-height: var(--hit-area);
+  padding: 0 var(--space-2);
+  border-style: dashed;
+  border-color: var(--color-border-control);
+  color: var(--color-text-muted);
+}
+
+@media (pointer: coarse) {
+  button.tag.chip,
+  button.chip-add {
+    min-height: var(--hit-area-touch);
+  }
+}
+
+.mesh-list {
+  margin-top: var(--space-2);
+}
+
+.tags {
+  margin: var(--space-2) 0;
+}
+
+/* ==== vote-popup: one small popup under a chip ================================================================== */
+.vote-popup {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: var(--z-popup);
+  margin-top: var(--space-1);
+  width: var(--popup-width);
+  max-width: calc(100vw - 2 * var(--space-4));
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border-control);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-popup);
+  text-align: left;
+  white-space: normal;
+}
+
+.vote-popup-head {
+  margin-bottom: var(--space-2);
+}
+
+.vote-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+.count-up {
+  color: var(--color-vote-agree);
+}
+
+.count-down {
+  color: var(--color-vote-disagree);
+}
+
+.vote-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1-5);
+}
+
+.vote-popup button.vote-btn.pressed,
+.segmented button.seg.pressed {
+  background: var(--color-selected-bg);
+  border-color: var(--color-accent);
+}
+
+.vote-info {
+  margin-top: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+.vote-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--space-2);
+}
+
+@media (max-width: 40rem) {
+  /* on a phone the popup is a sheet at the bottom: it can never run off the screen */
+  .vote-popup {
+    position: fixed;
+    top: auto;
+    left: var(--space-4);
+    right: var(--space-4);
+    bottom: var(--space-4);
+    width: auto;
+  }
+}
+
+/* ==== segmented: two toggle buttons in one box ====================================================================== */
+.segmented {
+  display: inline-flex;
+}
+
+.segmented button.seg {
+  border-radius: 0;
+  margin: 0;
+}
+
+.segmented button.seg + button.seg {
+  margin-left: calc(-1 * var(--border-width));
+}
+
+.segmented button.seg:first-child {
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+
+.segmented button.seg:last-child {
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+.segmented button.seg.pressed {
+  position: relative;
+  z-index: var(--z-base);
+}
+
+.table-ok {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
+}
+
+.count {
+  font-size: var(--font-size-xs);
+  margin-right: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+/* ==== tag picker (add a tag from an ontology) ====================================================================== */
+.tag-picker {
+  flex-basis: 100%;
+  margin-top: var(--space-1-5);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--color-border-control);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  max-width: 35rem;
+}
+
+.tag-ontologies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1-5);
+  margin-bottom: var(--space-1-5);
+}
+
+button.onto.active {
+  border-color: var(--color-accent);
+  background: var(--color-selected-bg);
+}
+
+input.tag-filter {
+  display: block;
+  width: 100%;
+  margin-bottom: var(--space-1-5);
+}
+
+input.nsubjects-input {
+  width: 6rem;
+}
+
+ul.tag-concepts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 14rem;
+  overflow: auto;
+  text-align: left;
+}
+
+button.concept {
+  width: 100%;
+  text-align: left;
+  border-color: transparent;
+  background: transparent;
+}
+
+button.concept:hover:not(:disabled) {
+  border-color: var(--color-border-control);
+}
+
+.meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
+}
+
+.meta-row .label {
+  min-width: 11rem;
+}
+
+/* ==== comments =========================================================================================== */
+ul.comment-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}
+
+li.comment {
+  margin: var(--space-2) 0;
+  padding: var(--space-1-5) var(--space-3);
+  border-left: var(--focus-ring-width) solid var(--color-border);
+}
+
+.comment-body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.comment-box textarea {
+  display: block;
+  width: calc(100% - var(--space-4));
+  margin-bottom: var(--space-1-5);
+}
+
+.empty-table {
+  margin: var(--space-1) 0;
+}
+
+/* ==== data-table: read-only coordinates and the editable table ================================================== */
+/* while the editor is on, its editable table replaces the read-only one */
+.te-active .exp-readonly {
+  display: none;
+}
+
+.coords-table,
+.te-table {
+  width: 100%;
+}
+
+.coords-table td,
+.te-table td {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.coords-table td:nth-child(n + 4),
+.te-extra {
+  color: var(--color-text-muted);
+}
+
+.te-scroll,
+.coords-scroll {
+  max-height: var(--table-max-height);
+  overflow: auto;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.te-scroll thead th,
+.coords-scroll thead th {
+  position: sticky;
+  top: 0;
+}
+
+.te-table tbody tr {
+  cursor: pointer;
+}
+
+.te-table tbody tr:hover {
+  background: var(--color-surface-raised);
+}
+
+.te-table tr.te-selected {
+  background: var(--color-selected-bg);
+}
+
+.te-table tr.te-new {
+  background: var(--color-new-row-bg);
+}
+
+.te-cell {
+  width: 100%;
+  min-width: 3.5rem;
+  text-align: center;
+}
+
+.te-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* row buttons appear on hover or focus, and are always there on touch screens */
+.row-actions {
+  opacity: 0;
+  transition: opacity var(--duration-fast);
+}
+
+.te-table tr:hover .row-actions,
+.te-table tr:focus-within .row-actions,
+.te-table tr.te-selected .row-actions {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .row-actions {
+    opacity: 1;
+  }
+}
+
+/* ==== icon-button: round, icon only (always with an aria-label) ===================================================== */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--hit-area);
+  height: var(--hit-area);
+  min-height: var(--hit-area);
+  padding: 0;
+  border-radius: var(--radius-round);
+  font-size: var(--font-size-lg);
+  line-height: 1;
+}
+
+@media (pointer: coarse) {
+  .icon-btn {
+    width: var(--hit-area-touch);
+    height: var(--hit-area-touch);
+    min-height: var(--hit-area-touch);
+  }
+}
+
+.te-pencil {
+  color: var(--color-text-muted);
+}
+
+/* ==== toolbar: secondary buttons under the table ====================================================================== */
+.te-toolbar,
+.te-form-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1-5);
+  margin-top: var(--space-2);
+}
+
+.te-empty {
+  margin: var(--space-2) 0;
+}
+
+.te-root {
+  margin-top: var(--space-1);
+}
+
+.te-btn {
+  margin: 0;
+}
+
+.te-active .exp-title,
+.te-active .exp-caption {
+  cursor: text;
+}
+
+.te-inline-form {
+  flex-basis: 100%;
+}
+
+.te-text {
+  width: 100%;
+}
+
+/* ==== dialog (import from text) ============================================================================= */
+.te-import {
+  margin: var(--space-2) 0;
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--color-border-control);
+  background: var(--color-surface);
+}
+
+.te-import h4 {
+  margin: 0 0 var(--space-1);
+}
+
+.te-import-text {
+  width: 100%;
+  font-family: var(--font-family-mono);
+}
+
+.te-import-preview {
+  margin-top: var(--space-1-5);
+  max-height: 240px;
+  overflow: auto;
+}
+
+.te-import-rows td,
+.te-import-rows th {
+  padding: 0 var(--space-2);
+  text-align: right;
+}
+
+.add-article label {
+  display: inline-block;
+}
+
+.add-ntables {
+  width: 5em;
+}
+
+/* ==== collections ============================================================================================== */
+.col-toolbar {
+  margin: var(--space-2) 0;
+  font-size: var(--font-size-sm);
+}
+
+.col-select {
+  display: inline-block;
+  min-width: 1.4rem;
+}
+
+.col-add {
+  position: relative;
+  display: inline-block;
+}
+
+.col-menu {
+  position: absolute;
+  z-index: var(--z-popup);
+  left: 0;
+  min-width: var(--menu-width);
+  margin-top: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--color-border-control);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-popup);
+  text-align: left;
+}
+
+.col-menu-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.col-menu-list li {
+  margin: var(--space-1) 0;
+}
+
+.col-menu input.col-name {
+  width: 12rem;
+}
+
+.collection {
+  margin: var(--space-3) 0;
+  padding: var(--space-1-5) var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.col-body {
+  margin-top: var(--space-1-5);
+}
+
+.col-articles {
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+.col-articles li {
+  margin: var(--space-1) 0;
+}

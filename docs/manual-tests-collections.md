@@ -61,3 +61,7 @@ Layout and CSS (menu position, dark style, narrow screens), real DOMParser entit
 (the pages copy index.html/search.html's meta; no inline script or handler was added), the real Parse queries for titles
 (`containedIn` on `PMID`, `select("PMID","Title")`), the OAuth flow, keyboard focus. The unit tests (`node --test test/collections.test.js`)
 cover helpers, selection, menu actions, errors, appends and the page logic on the fake DOM and the mock.
+
+## UI round
+
+Buttons, inputs and the menu now use the shared dark base style (`client/css/README.md`); the collection name limit is 100 characters. `?theme=light` shows the light theme on the same pages. The search page was fixed to run in a real browser (`children.filter` on an HTMLCollection).

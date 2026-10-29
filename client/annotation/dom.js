@@ -25,6 +25,9 @@ export const isSafeUrl = (u) => {
   return !m || ["http", "https", "mailto"].includes(m[1].toLowerCase());
 };
 
+/** The document used to create nodes (null outside a page). */
+export const getDocument = () => doc;
+
 /** A text node. null and undefined give an empty text node. */
 export const text = (s) => doc.createTextNode(s === null || typeof s === "undefined" ? "" : String(s));
 

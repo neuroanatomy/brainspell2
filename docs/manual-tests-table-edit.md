@@ -7,6 +7,13 @@ Keep the console open: a Content-Security-Policy violation shows in red. Mock pa
 "Saving..." state visible; `fail=155` / `fail=142` make every write fail with that code. Fixture 12345: experiment 1 has
 5 rows, experiment 2 has 2 rows, experiment 3 is empty.
 
+## UI round (read first): what changed in the steps below
+
+* Title and caption are edited **in place**: click the text or the small pencil button (labelled "Edit title" / "Edit caption") next to it; Enter saves a title (Ctrl+Enter a caption), Esc or Cancel restores the text.
+* Per-row buttons are round icon buttons ("+" = "Add row after this row", "−" = "Delete this row"); they appear when the row is hovered, focused or selected, and are always visible on touch screens. The header has one "+" ("Add row"). While a row is edited, ✓ saves and ✕ cancels it (Enter / Esc also work).
+* "Import from text" and "Split here" are in a toolbar **below** the table. "Split here" is disabled (its tooltip says why) until a row after the first is selected.
+* The table is as tall as its rows (scrolls above 420px); the viewer and the table are side by side from 900px of window width and stacked below it.
+
 ## A. Anonymous (`?pmid=12345&mock=1`)
 
 | # | Step | Expected |

@@ -62,26 +62,22 @@ const buildExperiment = (ex, i) => {
   const annSlot = el("div", {class: "exp-annotations"});
   const titleNode = el("b", {class: "noEmptyWithPlaceholder exp-title", placeholder: "No Title"}, decodedOnly(ex.title));
   const captionNode = el("span", {class: "noEmptyWithPlaceholder exp-caption", placeholder: "No Caption"}, decodedOnly(ex.caption));
-  const node = el("div", {class: "experiment"},
-    el("b", null, `${i}.`), " ", titleNode, el("br"), captionNode, el("br"), annSlot);
+  const titleBox = el("div", {class: "exp-title-box"}, el("b", {class: "exp-index"}, `${i}.`), titleNode);
+  const captionBox = el("div", {class: "exp-caption-box"}, captionNode);
+  const node = el("div", {class: "experiment"}, titleBox, captionBox, annSlot);
   const locations = ex.locations || [];
-  // nodes the table editor (hooks) may use: title, caption, viewer and coordinates cell
-  const slots = {title: titleNode, caption: captionNode, viewer: null, coords: null};
+  // nodes the table editor (hooks) may use: title, caption (and their boxes), viewer and coordinates
+  const slots = {title: titleNode, caption: captionNode, titleBox, captionBox, viewer: null, coords: null};
   const hasExtra = locations.some((l) => String(l).split(",").length > 3);
   if (locations.length > 0) {
-    slots.viewer = el("div", {id: `viewer${i}`, style: "width:480px;height:480px; border:1px solid #111"});
-    // exp-readonly: hidden by the table editor (table-edit.css) while it shows its editable table
-    slots.coords = el("td", {class: "exp-coords", style: "vertical-align:top; border:1px solid #2d2d2d"},
-      el("div", {class: "exp-readonly"},
-        el("table", {class: "coords-table"}, el("thead", null, el("tr", null,
-          el("th", null, el("span", {class: "text"}, "X")),
-          el("th", null, el("span", {class: "text"}, "Y")),
-          el("th", null, el("span", {class: "text"}, "Z")),
-          hasExtra ? el("th", null, el("span", {class: "text"}, "Extra")) : null))),
-        el("div", {id: "table-wrapper"}, el("div", {id: "table-scroll"},
-          el("table", {class: "coords-table"}, el("tbody", null, locations.map((l) => coordRow(l, hasExtra))))))));
-    node.appendChild(el("table", null, el("tr", null,
-      el("td", {style: "vertical-align:top"}, slots.viewer), slots.coords)));
+    slots.viewer = el("div", {id: `viewer${i}`, class: "exp-viewer"});
+    // exp-readonly: hidden by the table editor (components.css) while it shows its editable table
+    slots.coords = el("div", {class: "exp-coords"},
+      el("div", {class: "exp-readonly"}, el("div", {class: "coords-scroll"},
+        el("table", {class: "coords-table"},
+          el("thead", null, el("tr", null, el("th", null, "X"), el("th", null, "Y"), el("th", null, "Z"), hasExtra ? el("th", null, "Extra") : null)),
+          el("tbody", null, locations.map((l) => coordRow(l, hasExtra)))))));
+    node.appendChild(el("div", {class: "exp-grid"}, slots.viewer, slots.coords));
   } else {
     node.appendChild(el("p", {class: "muted empty-table exp-readonly"}, "This table has no coordinates."));
   }

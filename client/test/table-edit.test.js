@@ -136,7 +136,7 @@ test("invalid coordinate: nothing sent, message shown; Escape cancels; unchanged
 
 test("add row after a row, at the end, and into an empty table", async () => {
   const {root, state} = await setup();
-  await root.buttons("+").find((b) => b.getAttribute("title").includes("after")).dispatch("click"); // after row 1
+  await root.byLabel("Add row after this row")[0].dispatch("click"); // after row 1
   let tr = root.byTag("tbody")[0].children[1];
   assert.equal(tr.classList.contains("te-new"), true);
   fill(tr, ["9", "8", "7"]);
@@ -144,7 +144,7 @@ test("add row after a row, at the end, and into an empty table", async () => {
   await flush();
   assert.equal(rowsText(root)[1], "9,8,7");
   assert.equal(rowsText(root).length, 6);
-  await root.byTag("thead")[0].buttons("+")[0].dispatch("click"); // at the end
+  await root.byTag("thead")[0].byLabel("Add row")[0].dispatch("click"); // at the end
   tr = root.byTag("tbody")[0].children[6];
   fill(tr, ["1", "1", "1"]);
   await tr.byTag("input")[0].dispatch("keydown", {key: "Enter"});
@@ -164,15 +164,15 @@ test("add row after a row, at the end, and into an empty table", async () => {
 
 test("delete row; the last row asks for confirmation", async () => {
   const {root} = await setup({expId: 2, confirm: () => false});
-  await root.buttons("-")[0].dispatch("click");
+  await root.byLabel("Delete this row")[0].dispatch("click");
   await flush();
   assert.equal(rowsText(root).length, 1);
-  await root.buttons("-")[0].dispatch("click");
+  await root.byLabel("Delete this row")[0].dispatch("click");
   await flush();
   assert.equal(rowsText(root).length, 1, "declined: still there");
   const ok = await setup({expId: 2, confirm: () => true});
-  await ok.root.buttons("-")[0].dispatch("click");
-  await ok.root.buttons("-")[0].dispatch("click");
+  await ok.root.byLabel("Delete this row")[0].dispatch("click");
+  await ok.root.byLabel("Delete this row")[0].dispatch("click");
   await flush();
   assert.ok(ok.root.textContent.includes("This table has no coordinates."));
   assert.equal(ok.state.rev, 2);
@@ -199,7 +199,7 @@ test("split: needs a selected row and a confirmation; the page is reloaded to sh
 
 test("title and caption: edit, limits, plain text shown", async () => {
   const s = await setup();
-  await s.root.buttons("Edit title")[0].dispatch("click");
+  await s.root.byLabel("Edit title")[0].dispatch("click");
   const input = s.root.byTag("input")[0];
   assert.equal(input.value, "Task > baseline");
   input.value = "New <b>title</b>";
@@ -207,7 +207,7 @@ test("title and caption: edit, limits, plain text shown", async () => {
   await flush();
   assert.equal(s.title.textContent, "New <b>title</b>");
   assert.equal(s.title.byTag("b").length, 0);
-  await s.root.buttons("Edit caption")[0].dispatch("click");
+  await s.root.byLabel("Edit caption")[0].dispatch("click");
   const area = s.root.byTag("textarea")[0];
   assert.equal(area.value, "Activations for <b>task</b> vs baseline", "tags in a caption are text, not markup");
   area.value = "x".repeat(5001);
@@ -274,7 +274,7 @@ test("not sent while annotations are loading; logout hides the controls", async 
   const calls = [];
   const s = await setup({wrap: (c) => async (n, p) => { calls.push(n); return c(n, p); }});
   s.state.loaded = false;
-  await s.root.buttons("Edit title")[0].dispatch("click");
+  await s.root.byLabel("Edit title")[0].dispatch("click");
   await s.root.buttons("Save")[0].dispatch("click"); // unchanged: cancels
   await s.root.buttons("Import from text")[0].dispatch("click");
   s.root.byTag("textarea")[0].value = "1,2,3";

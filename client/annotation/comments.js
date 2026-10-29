@@ -26,7 +26,7 @@ export const renderComments = (ctx) => {
   const box = el("div", {class: "comment-box"});
   const area = el("textarea", {class: "comment-text", rows: "3", maxlength: String(MAX_COMMENT), placeholder: "Write a comment…", "aria-label": "Comment"});
   const status = createStatus();
-  const post = el("button", {type: "button", class: "vote", onclick: async () => {
+  const post = el("button", {type: "button", class: "btn-primary", onclick: async () => {
     const t = validComment(area.value);
     if (t === null) {
       status.error({code: 142, message: `a comment has 1 to ${MAX_COMMENT} characters`});
