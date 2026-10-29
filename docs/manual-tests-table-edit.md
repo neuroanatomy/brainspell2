@@ -36,6 +36,10 @@ Keep the console open: a Content-Security-Policy violation shows in red. Mock pa
 | B16 | Do two edits in a row (e.g. B4 then B6). | Both succeed (the page tracks the new rev). No "changed meanwhile" message. |
 | B17 | `fail=155`: edit a row. | "Too many actions, please wait. ..." next to the controls; table unchanged. `fail=142`: "Not accepted: ...". |
 | B18 | Log out (header). | Editing controls disappear at once; the read-only table is back. |
+| B19 | Title `Faces<Houses contrast` and caption `A &amp; B`, Save; reload the page; open Edit title. | Shown exactly as typed, before and after the reload; the edit box starts with the same text. |
+| B20 | Import the same rows twice in a row. | The second time nothing visibly happens (the server reports no change), no reload, the dialog closes. |
+| B21 | With a legacy 4-value row (real data), look at the table. | Header "Extra" appears only for tables having such a row; the row has 3 inputs when edited, the extra value stays. |
+| B22 | `?pmid=12345&mock=1&as=alice` with the server not answering for 30 s (real server, network blocked). | After 30 s "The server did not answer. Please try again." |
 
 ## C. Add article (`?pmid=555&mock=1&as=alice`)
 
@@ -44,6 +48,7 @@ Keep the console open: a Content-Security-Policy violation shows in red. Mock pa
 | C1 | Open the page. | Form with PMID 555 (read-only) and "Number of stereotaxic tables" = 1. |
 | C2 | Set 51, or `abc`, click "Add article". | "the number of tables must be a whole number between 0 and 50"; nothing sent. |
 | C3 | Set 3, click (use `latency=1500`). | "Saving..." and the button is disabled; then the page reloads and shows the article with 3 empty tables (each with the add-row / import prompt). |
+| C5 | Real server with Solr down (or mock with indexed=false). | After adding: "Article added, but search indexing is pending; ..." with an OK button; the page reloads on OK or after 4 s. |
 | C4 | `fail=155`, `fail=142`. | The error message appears next to the button; the form stays usable. |
 
 ## D. Against a real server (needs a logged-in GitHub user; riskiest steps first)

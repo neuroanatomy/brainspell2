@@ -21,6 +21,7 @@ export const CODES = {
   UPSTREAM: 1002,
   INVALID_SESSION: 209, // Parse's own code for a dead session token
   NETWORK: 100,
+  TIMEOUT: 1003,
   UNKNOWN: -1
 };
 
@@ -67,6 +68,22 @@ export const setBackend = (b) => {
   mock = null;
 };
 
+let timeoutMs = 30000;
+/** tests only */
+export const setTimeoutMs = (ms) => {
+  timeoutMs = ms;
+};
+
+/** Reject with {code: 1003} if the server does not answer in time. */
+const withTimeout = (promise) => {
+  let timer;
+  const limit = new Promise((_, reject) => {
+    timer = setTimeout(() => reject({code: CODES.TIMEOUT, message: "The server did not answer"}), timeoutMs);
+  });
+
+  return Promise.race([promise, limit]).finally(() => clearTimeout(timer));
+};
+
 const run = async (name, p) => {
   if (backend) {
     return backend.call(name, p);
@@ -80,7 +97,7 @@ const run = async (name, p) => {
 
 export const call = async (name, p = {}) => {
   try {
-    return await run(name, p);
+    return await withTimeout(run(name, p));
   } catch (err) {
     const e = mapError(err);
     if (e.code === CODES.NOT_LOGGED_IN || e.code === CODES.INVALID_SESSION) {
@@ -101,9 +118,9 @@ export const call = async (name, p = {}) => {
  * Resolves to the plain JSON of the article or null if the PMID is not in the database.
  */
 export const getArticle = async (pmid) => {
-  try {
+  const fetchOne = async () => {
     if (backend && backend.getArticle) {
-      return await backend.getArticle(pmid);
+      return backend.getArticle(pmid);
     }
     if (isMock()) {
       return (await getMock()).getArticle(pmid);
@@ -114,6 +131,9 @@ export const getArticle = async (pmid) => {
     const ob = await query.first();
 
     return ob ? ob.toJSON() : null;
+  };
+  try {
+    return await withTimeout(fetchOne());
   } catch (err) {
     throw mapError(err);
   }

@@ -1,7 +1,7 @@
 import * as login from "./src/login.js";
 import * as session from "./annotation/session.js";
 import * as api from "./annotation/api.js";
-import {el, setChildren, decoded} from "./annotation/dom.js";
+import {el, setChildren, decoded, decodedOnly} from "./annotation/dom.js";
 import {createContext, loginHint, describeError} from "./annotation/context.js";
 import {renderMesh, renderTableOk} from "./annotation/votes.js";
 import {renderTags} from "./annotation/tags.js";
@@ -46,7 +46,13 @@ export const setViewerFactory = (fn) => {
 
 const message = (cls, ...children) => el("p", {class: cls}, ...children);
 
-const coordRow = (loc) => el("tr", null, String(loc).split(",").map((v) => el("td", null, v)));
+// legacy rows may have more than three values (e.g. a z-score): x, y, z in their cells, the rest in an "Extra" cell
+const coordRow = (loc, hasExtra) => {
+  const v = String(loc).split(",");
+
+  return el("tr", null, v.slice(0, 3).map((x) => el("td", null, x)),
+    hasExtra ? el("td", {class: "muted"}, v.slice(3).join(", ")) : null);
+};
 
 /**
  * One experiment: title, caption, slot for the annotations, viewer and coordinate table.
@@ -54,13 +60,14 @@ const coordRow = (loc) => el("tr", null, String(loc).split(",").map((v) => el("t
  */
 const buildExperiment = (ex, i) => {
   const annSlot = el("div", {class: "exp-annotations"});
-  const titleNode = el("b", {class: "noEmptyWithPlaceholder exp-title", placeholder: "No Title"}, decoded(ex.title));
-  const captionNode = el("span", {class: "noEmptyWithPlaceholder exp-caption", placeholder: "No Caption"}, decoded(ex.caption));
+  const titleNode = el("b", {class: "noEmptyWithPlaceholder exp-title", placeholder: "No Title"}, decodedOnly(ex.title));
+  const captionNode = el("span", {class: "noEmptyWithPlaceholder exp-caption", placeholder: "No Caption"}, decodedOnly(ex.caption));
   const node = el("div", {class: "experiment"},
     el("b", null, `${i}.`), " ", titleNode, el("br"), captionNode, el("br"), annSlot);
   const locations = ex.locations || [];
   // nodes the table editor (hooks) may use: title, caption, viewer and coordinates cell
   const slots = {title: titleNode, caption: captionNode, viewer: null, coords: null};
+  const hasExtra = locations.some((l) => String(l).split(",").length > 3);
   if (locations.length > 0) {
     slots.viewer = el("div", {id: `viewer${i}`, style: "width:480px;height:480px; border:1px solid #111"});
     // exp-readonly: hidden by the table editor (table-edit.css) while it shows its editable table
@@ -69,9 +76,10 @@ const buildExperiment = (ex, i) => {
         el("table", {class: "coords-table"}, el("thead", null, el("tr", null,
           el("th", null, el("span", {class: "text"}, "X")),
           el("th", null, el("span", {class: "text"}, "Y")),
-          el("th", null, el("span", {class: "text"}, "Z"))))),
+          el("th", null, el("span", {class: "text"}, "Z")),
+          hasExtra ? el("th", null, el("span", {class: "text"}, "Extra")) : null))),
         el("div", {id: "table-wrapper"}, el("div", {id: "table-scroll"},
-          el("table", {class: "coords-table"}, el("tbody", null, locations.map(coordRow)))))));
+          el("table", {class: "coords-table"}, el("tbody", null, locations.map((l) => coordRow(l, hasExtra))))))));
     node.appendChild(el("table", null, el("tr", null,
       el("td", {style: "vertical-align:top"}, slots.viewer), slots.coords)));
   } else {
@@ -86,7 +94,7 @@ const startViewers = (experiments) => {
     if ((ex.locations || []).length === 0) {
       return;
     }
-    const l = ex.locations.map((o) => o.split(',').map((o2) => parseFloat(o2)));
+    const l = ex.locations.map((o) => o.split(',').slice(0, 3).map((o2) => parseFloat(o2)));
     Promise.resolve().then(() => viewerFactory(`viewer${i}`, l)).catch((err) => {
       console.log("viewer failed", err);
     });
@@ -124,6 +132,9 @@ const displayArticle = (root, art) => {
   // --- annotations -----------------------------------------------------------------------------
   let ctx = null;
   let seq = 0;
+  // The rev of the document the rows were rendered from (NOT the one of getAnnotations, which is read in
+  // another request and may be newer than the rows on the page). Updated only by our own successful edits.
+  let docRev = art.rev || 0;
   const toolsDone = new Set();
 
   const callTools = () => {
@@ -136,17 +147,11 @@ const displayArticle = (root, art) => {
       hooks.runExperimentTools(shell.node, ex, {
         pmid,
         get rev() {
-          return ctx ? ctx.ann.rev : 0;
-        },
-        // false until getAnnotations has answered (the rev is not known before)
-        get annotationsLoaded() {
-          return !!ctx;
+          return docRev;
         },
         // the server's answer to a successful edit carries the new rev
         setRev: (rev) => {
-          if (ctx) {
-            ctx.ann.rev = rev;
-          }
+          docRev = rev;
         },
         slots: shell.slots,
         createViewer,
@@ -164,7 +169,13 @@ const displayArticle = (root, art) => {
 
   const mount = (ann) => {
     ctx = createContext({pmid, ann, call: api.call, user: session.current});
-    setChildren(annStatus, loginHint(ctx));
+    const truncated = el("p", {class: "ann-status muted"}, "Counts may be incomplete");
+    const showTruncated = () => {
+      truncated.hidden = !ctx.ann.truncated;
+    };
+    ctx.subscribe(showTruncated);
+    showTruncated();
+    setChildren(annStatus, loginHint(ctx), truncated);
     setChildren(meshSlot, renderMesh(ctx, meshHeadings));
     setChildren(metaSlot, renderMeta(ctx));
     expShells.forEach((s, i) => {

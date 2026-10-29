@@ -116,6 +116,8 @@ const pmidOf = (v) => {
  * @param {string|null} opts.user login of the signed-in user (null: anonymous)
  * @param {number|null} opts.failCode every write function fails with this code
  * @param {number} opts.latency artificial latency in ms
+ * @param {boolean} opts.truncated getAnnotations answers truncated: true
+ * @param {boolean} opts.indexed false: addArticle answers indexed: false (Solr down)
  * @param {function} opts.now clock in ms (tests)
  * @param {object} opts.articles initial articles, keyed by PMID
  */
@@ -262,8 +264,9 @@ export const createMockApi = (opts = {}) => {
       noUnknown(p, ["pmid"]);
       const art = article(p.pmid);
       const c = commentsOf(art.PMID);
+      const extra = opts.truncated ? {truncated: true} : {};
 
-      return clone({
+      return clone({...extra,
         pmid: art.PMID, rev: art.rev || 0, votes: votesOf(art), stereo: stereoOf(art), nsubjects: nsubjectsOf(art),
         comments: c.list, commentCount: c.count
       });
@@ -297,7 +300,7 @@ export const createMockApi = (opts = {}) => {
           const concept = CONCEPTS[ontology].find((c) => tagKey(c.name) === tagKey(p.tag));
           const legacy = (exp.tags || []).find((t) => t.ontology === ontology && tagKey(t.name) === tagKey(p.tag));
           if (!concept && !legacy) { fail(E.VALIDATION, "tag is not a known term of this ontology"); }
-          tag = concept ? concept.name : legacy.name;
+          tag = legacy ? legacy.name : concept.name; // the legacy spelling wins when the article has the tag
         }
       }
       const key = {kind: p.kind, experimentId, ontology, tag};
@@ -347,9 +350,9 @@ export const createMockApi = (opts = {}) => {
       noUnknown(p, ["pmid", "text"]);
       requireUser();
       const art = article(p.pmid);
-      str(p.text, "text", 1, 5000);
+      const body = str(typeof p.text === "string" ? p.text.trim() : p.text, "text", 1, 5000); // trimmed, like the server
       rateLimit("postComment");
-      const c = {id: `c${++state.seq}`, login: state.user, text: p.text, createdAt: new Date(now()).toISOString(), pmid: art.PMID};
+      const c = {id: `c${++state.seq}`, login: state.user, text: body, createdAt: new Date(now()).toISOString(), pmid: art.PMID};
       state.comments.push(c);
 
       return {id: c.id, login: c.login, text: c.text, createdAt: c.createdAt};
@@ -366,7 +369,7 @@ export const createMockApi = (opts = {}) => {
       if ((art.rev || 0) !== p.rev) { fail(E.CONFLICT, `Conflict, current rev is ${art.rev || 0}`); }
       const exps = clone(art.Experiments);
       let idx = exps.findIndex((x) => x.id === p.experimentId);
-      if (idx < 0) { fail(E.VALIDATION, "experimentId does not exist in this article"); }
+      if (idx < 0) { fail(E.NOT_FOUND, "experiment not found in this article"); }
       const changed = new Set([p.experimentId]);
       const fmt = (n) => String(Math.round(n * 1000) / 1000);
       const xyzOf = (a) => {
@@ -383,7 +386,8 @@ export const createMockApi = (opts = {}) => {
         case "setCaption": ex.caption = str(op.text, "text", 0, 5000); break;
         case "updateRow":
           int(op.index, "index", 0, ex.locations.length - 1);
-          ex.locations[op.index] = xyzOf(op.xyz);
+          // legacy rows may have extra values after z (z-score): like the server, keep them
+          ex.locations[op.index] = [xyzOf(op.xyz), ...String(ex.locations[op.index]).split(",").slice(3)].join(",");
           break;
         case "addRow": {
           const at = typeof op.index === "undefined" ? ex.locations.length : int(op.index, "index", 0, ex.locations.length);
@@ -419,6 +423,10 @@ export const createMockApi = (opts = {}) => {
         }
         if (ex.locations.length > 5000) { fail(E.VALIDATION, "too many rows"); }
       }
+      if (JSON.stringify(exps) === JSON.stringify(art.Experiments)) {
+        // like the server: a no-op is not written and does not bump the rev
+        return {rev: art.rev || 0, experiments: []};
+      }
       art.Experiments = exps;
       art.rev = (art.rev || 0) + 1;
 
@@ -436,10 +444,10 @@ export const createMockApi = (opts = {}) => {
         objectId: `obj${pmid}`, PMID: pmid, Title: `Mock article ${pmid}`, Authors: "", Reference: "", Abstract: "",
         Metadata: {meshHeadings: []},
         Experiments: Array.from({length: n}, (_, i) => ({id: i + 1, title: "", caption: "", locations: [], tags: [], markBadTable: {ok: 0, bad: 0}})),
-        rev: 0, indexed: true
+        rev: 0, indexed: opts.indexed !== false
       };
 
-      return {objectId: `obj${pmid}`, pmid, indexed: true};
+      return {objectId: `obj${pmid}`, pmid, indexed: opts.indexed !== false};
     },
 
     listCollections: (p) => {
@@ -456,13 +464,15 @@ export const createMockApi = (opts = {}) => {
       const mine = state.collections.filter((c) => c.user === userId());
       let col;
       if (p.id) {
+        const any = state.collections.find((c) => c.id === p.id);
+        if (any && any.user !== userId()) { fail(E.FORBIDDEN, "Not your collection"); }
         col = mine.find((c) => c.id === p.id) || fail(E.NOT_FOUND, "Collection not found");
       } else {
         if (mine.length >= 50) { fail(E.VALIDATION, "too many collections (50)"); }
         col = {id: `col${++state.seq}`, user: userId(), name: "", pmids: []};
         state.collections.push(col);
       }
-      if (typeof p.name !== "undefined") { col.name = str(p.name, "name", 1, 200); } else if (!p.id) { fail(E.VALIDATION, "name is required"); }
+      if (typeof p.name !== "undefined") { col.name = str(p.name, "name", 1, 100); } else if (!p.id) { fail(E.VALIDATION, "name is required"); }
       for (const x of (p.remove || [])) { col.pmids = col.pmids.filter((y) => y !== pmidOf(x)); }
       for (const x of (p.add || [])) { if (!col.pmids.includes(pmidOf(x))) { col.pmids.push(x); } }
       if (col.pmids.length > 2000) { fail(E.VALIDATION, "too many articles (2000)"); }
@@ -474,8 +484,9 @@ export const createMockApi = (opts = {}) => {
     deleteCollection: (p) => {
       noUnknown(p, ["id"]);
       requireUser();
-      const i = state.collections.findIndex((c) => c.id === p.id && c.user === userId());
+      const i = state.collections.findIndex((c) => c.id === p.id);
       if (i < 0) { fail(E.NOT_FOUND, "Collection not found"); }
+      if (state.collections[i].user !== userId()) { fail(E.FORBIDDEN, "Not your collection"); }
       state.collections.splice(i, 1);
 
       return {id: p.id};
@@ -485,7 +496,7 @@ export const createMockApi = (opts = {}) => {
       noUnknown(p, ["ontology"]);
       if (!ONTOLOGIES.includes(p.ontology)) { fail(E.VALIDATION, "ontology must be cognitive, behavioural or tasks"); }
 
-      return clone(CONCEPTS[p.ontology]);
+      return CONCEPTS[p.ontology].map((c) => ({name: c.name, parent: c.parent || null}));
     },
 
     getConcept: (p) => {

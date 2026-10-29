@@ -148,7 +148,7 @@ test("menu: create a new collection, then add to the existing one", async () => 
   const input = toolbar.all((n) => n.tagName === "INPUT" && n.classList.contains("col-name"))[0];
   // empty name refused locally
   await toolbar.buttons("Create")[0].dispatch("click");
-  assert.match(toolbar.textContent, /name must have 1 to 200/);
+  assert.match(toolbar.textContent, /name must have 1 to 100/);
   input.value = " Memory ";
   await toolbar.buttons("Create")[0].dispatch("click");
   await flush();

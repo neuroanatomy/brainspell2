@@ -42,6 +42,7 @@ export const describeError = (err) => {
   case 119: return "You are not allowed to do this.";
   case 101: return "Not found.";
   case 100: return "Cannot reach the server.";
+  case 1003: return "The server did not answer. Please try again.";
   default: return msg || "Something went wrong.";
   }
 };

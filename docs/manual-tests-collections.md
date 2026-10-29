@@ -17,7 +17,7 @@ Renaming a collection is not available (not in the frozen API, plan 4); do not l
 | A1 | Open `search.html?q=memory`, scroll until more than 40 results are loaded. Tick a few boxes in the first batch, keep scrolling so the next 20 are appended. | Every item, including appended ones, has a checkbox; the ticks made earlier are still ticked; the counter ("3 articles selected") is right. |
 | A2 | The 3D coactivation viewer, the progress text ("n% loaded..."), the level slider and the result list. | Work exactly as before (checkboxes do not move or hide anything). |
 | A3 | "Select all". | All loaded items are ticked (not results not yet loaded). Scroll: newly appended items are not ticked until selected again. "Select none" clears all. |
-| A4 | Tick 3, "Add to collection (3)", "Create new collection...", press Create with an empty name. | Message "The name must have 1 to 200 characters"; nothing sent (Network tab). |
+| A4 | Tick 3, "Add to collection (3)", "Create new collection...", press Create with an empty name. | Message "The name must have 1 to 100 characters"; nothing sent (Network tab). |
 | A5 | Type a name, press Enter (or Create). | "Added 3 articles to <name>"; ticks are cleared; the menu closed. |
 | A6 | Tick 2 (one already in the collection), open the menu, choose the collection. | Menu lists it with its size; result "Added 1 article to <name> (1 already in it)". |
 | A7 | Press Create/choose 31 times within a minute (or until rate limited). | Message "Too many actions, please wait. ..." with seconds; ticks kept; button usable again. |

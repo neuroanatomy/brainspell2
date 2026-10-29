@@ -4,7 +4,7 @@
  * Nothing here uses innerHTML: nodes are built with dom.js only.
  *
  * Server limits (plan 4.3): 50 collections per user, 2000 articles per collection, at most
- * 2000 PMIDs in one add/remove list, 1..200 characters for a name.
+ * 2000 PMIDs in one add/remove list, 1..100 characters for a name.
  */
 import * as api from "./api.js";
 import * as session from "./session.js";
@@ -13,7 +13,7 @@ import {describeError} from "./context.js";
 
 export const MAX_PER_CALL = 2000;
 export const MAX_COLLECTIONS = 50;
-export const MAX_NAME = 200;
+export const MAX_NAME = 100;
 
 // ---- pure helpers ----
 
@@ -27,7 +27,7 @@ export const chunk = (list, n) => {
   return out;
 };
 
-/** Trimmed collection name if it is acceptable (1..200 characters), else null. */
+/** Trimmed collection name if it is acceptable (1..100 characters), else null. */
 export const validName = (s) => {
   const t = String(s === null || typeof s === "undefined" ? "" : s).trim();
 

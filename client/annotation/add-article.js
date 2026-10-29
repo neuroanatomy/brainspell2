@@ -10,6 +10,7 @@ import * as session from "./session.js";
 import * as hooks from "./hooks.js";
 
 export const MAX_TABLES = 50;
+export const INDEX_NOTE = "Article added, but search indexing is pending; it may not be found by search yet.";
 
 /** Text of the "Number of stereotaxic tables" field -> integer 0..50 or null. */
 export const parseNTables = (s) => {
@@ -59,8 +60,9 @@ export const renderAddArticle = (container, pmid, deps) => {
     busy = true;
     status.clear();
     status.pending(true);
+    let res;
     try {
-      await call("addArticle", {pmid: String(pmid), nTables: n});
+      res = await call("addArticle", {pmid: String(pmid), nTables: n});
     } catch (err) {
       busy = false;
       status.pending(false);
@@ -72,6 +74,20 @@ export const renderAddArticle = (container, pmid, deps) => {
       return;
     }
     status.element.className = "ann-status";
+    if (res && res.indexed === false) {
+      // Solr was unavailable: tell the user, then reload after OK or after a few seconds
+      let done = false;
+      const finish = () => {
+        if (!done) {
+          done = true;
+          deps.reload();
+        }
+      };
+      setChildren(status.element, INDEX_NOTE, " ", el("button", {type: "button", class: "te-btn", onclick: finish}, "OK"));
+      (deps.setTimer || setTimeout)(finish, deps.noteMs || 4000);
+
+      return;
+    }
     setChildren(status.element, "Added; loading the article");
     deps.reload();
   };

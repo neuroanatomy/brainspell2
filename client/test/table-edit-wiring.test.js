@@ -72,3 +72,76 @@ test("missing article: anonymous message / add form", async () => {
   const b = await run("?pmid=555&mock=1&as=alice&latency=0");
   assert.equal(b.root.buttons("Add article").length, 1);
 });
+
+// ---- fix round: C3 (rev of the rendered document) and C17 (truncated notice) ------------------------
+const runWith = async (backendOf) => {
+  const doc = makeDocument();
+  setDocument(doc);
+  globalThis.document = doc;
+  const root = doc.register("article", doc.createElement("div"));
+  globalThis.location = {search: "?pmid=12345"};
+  globalThis.window = {};
+  globalThis.Parse = {User: {current: () => ({}), logOut: async () => {}}};
+  session._reset();
+  hooks._clear();
+  const {createMockApi} = await import("../annotation/mock-api.js");
+  const mock = createMockApi({user: "alice", latency: 0, truncated: backendOf.truncated});
+  const stats = {fetches: 0};
+  api.setBackend({
+    call: async (name, p) => {
+      if (name === "getAnnotations" && backendOf.beforeAnnotations) {
+        const f = backendOf.beforeAnnotations;
+        backendOf.beforeAnnotations = null;
+        await f(mock); // another user's edit, after the page has fetched the article
+      }
+
+      return mock.call(name, p);
+    },
+    getArticle: async (pmid) => {
+      stats.fetches++;
+
+      return mock.getArticle(pmid);
+    }
+  });
+  article.setViewerFactory(async () => {});
+  tableEdit.register();
+  await session.init();
+  await article.init();
+  await flush(10);
+
+  return {root, mock, stats};
+};
+
+test("C3: another user inserts a row between the article fetch and getAnnotations: our delete gets 1001 and reloads, the wrong row is not deleted", async () => {
+  const {root, mock, stats} = await runWith({
+    beforeAnnotations: (m) => m.call("editExperiment", {pmid: "12345", experimentId: 1, rev: 0, ops: [{op: "addRow", index: 0, xyz: [1, 1, 1]}]})
+  });
+  assert.equal((await mock.getArticle("12345")).rev, 1);
+  const rows = root.findClass("te-table")[0].byTag("tbody")[0].children;
+  assert.equal(rows.length, 5, "the page shows the rows it fetched (without the inserted one)");
+  assert.equal(rows[0].children[0].textContent, "-42");
+  const fetches = stats.fetches;
+  await rows[0].buttons("-")[0].dispatch("click"); // delete what the user sees as the first row
+  await flush(10);
+  const art = await mock.getArticle("12345");
+  assert.equal(art.Experiments[0].locations.length, 6, "nothing was deleted");
+  assert.equal(art.Experiments[0].locations[1], "-42,18,24");
+  assert.equal(art.rev, 1);
+  assert.equal(stats.fetches, fetches + 1, "the page reloaded");
+  // after the reload the page shows the inserted row and a delete works
+  const again = root.findClass("te-table")[0].byTag("tbody")[0].children;
+  assert.equal(again.length, 6);
+  await again[0].buttons("-")[0].dispatch("click");
+  await flush(10);
+  assert.equal((await mock.getArticle("12345")).Experiments[0].locations.length, 5);
+});
+
+test("C17: 'Counts may be incomplete' only when getAnnotations says truncated", async () => {
+  const a = await runWith({truncated: true});
+  const note = a.root.findClass("ann-status").find((n) => n.textContent === "Counts may be incomplete");
+  assert.ok(note);
+  assert.equal(note.hidden, false);
+  const b = await runWith({});
+  const note2 = b.root.findClass("ann-status").find((n) => n.textContent === "Counts may be incomplete");
+  assert.equal(note2.hidden, true);
+});
