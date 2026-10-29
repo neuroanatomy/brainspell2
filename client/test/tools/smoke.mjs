@@ -13,7 +13,8 @@
  *   - an uncaught JS exception;
  *   - a Content-Security-Policy violation;
  *   - a console error that is not in the allow-list below;
- *   - the search page without "N articles found", without result items, or with a zero-size #viewer or canvas;
+ *   - the search page without "N articles found", without result items, with a zero-size #viewer or canvas, or whose map is not complete
+ *     ("Map from N papers" in #viewer-info, N = the number found) within 10 s (searches: prosodic, "cognition" = 445 papers);
  *   - any visible link, button, input, heading, list item or table cell that is covered by another element (stacking bugs);
  *   - the article page without a title, the collections page without its heading.
  * Prints a PASS/FAIL table with the reasons. Needs Node >= 22 (global fetch and WebSocket) and Google Chrome.
@@ -48,6 +49,7 @@ const ALLOW = [
 const PAGES = [
   {name: "home", path: "/index.html", wait: 4000},
   {name: "search", path: "/search.html?q=prosodic", wait: 20000, search: true},
+  {name: "search-big", path: "/search.html?q=%22cognition%22", wait: 25000, search: true, bigMap: true},
   {name: "article", path: "/article.html?pmid=18420426", wait: 8000, article: true},
   {name: "collections", path: "/collections.html", wait: 3000, collections: true}
 ];
@@ -64,7 +66,7 @@ return {checked: n, covered: bad.slice(0, 5), count: bad.length}; })()`;
 const STATE = `(() => { const q = (s) => document.querySelector(s); const v = q("#viewer"); const c = v && v.querySelector("canvas");
 return {found: (q("#num-found") || {}).textContent || "", items: document.querySelectorAll("#paper-list li").length,
   viewerH: v ? v.clientHeight : -1, viewerW: v ? v.clientWidth : -1, canvasH: c ? c.height : -1, canvasW: c ? c.width : -1,
-  title: (q("h2") || {}).textContent || "", h2: [...document.querySelectorAll("h2")].map((h) => h.textContent), theme: document.documentElement.getAttribute("data-theme") }; })()`;
+  info: (q("#viewer-info") || {}).textContent || "", legend: (q("#levelValue") || {}).textContent || "", title: (q("h2") || {}).textContent || "", h2: [...document.querySelectorAll("h2")].map((h) => h.textContent), theme: document.documentElement.getAttribute("data-theme") }; })()`;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -122,9 +124,10 @@ try {
         await sleep(500);
         if (p.search) {
           const s = await evalJs(b, STATE);
-          if (s && /articles found/.test(s.found) && s.items > 0 && Date.now() - t0 > 6000) { break; }
+          if (s && /articles found/.test(s.found) && s.items > 0 && /^Map from \d+ papers$/.test(s.info) && Date.now() - t0 > 400) { break; }
         }
       }
+      const elapsed = Date.now() - t0;
       await sleep(1500);
       const state = await evalJs(b, STATE);
       const cover = await evalJs(b, COVER);
@@ -133,6 +136,11 @@ try {
         if (!(state.items > 0)) { fails.push("no result items"); }
         if (!(state.viewerH > 0 && state.viewerW > 0)) { fails.push(`#viewer size ${state.viewerW}x${state.viewerH}`); }
         if (!(state.canvasH > 0 && state.canvasW > 0)) { fails.push(`canvas size ${state.canvasW}x${state.canvasH}`); }
+        const m = /^Map from (\d+) papers$/.exec(state.info);
+        const n = Number((/^(\d+) articles found/.exec(state.found) || [])[1]);
+        if (!m) { fails.push(`the map is not complete (status "${state.info}")`); } else if (Number(m[1]) !== n) { fails.push(`map from ${m[1]} papers but ${n} found`); }
+        if (!/overlapping peaks/.test(state.legend)) { fails.push(`no legend for the level ("${state.legend}")`); }
+        if (elapsed > 10000) { fails.push(`map took ${(elapsed / 1000).toFixed(1)} s (limit 10 s)`); }
       }
       if (p.article && !state.h2.length) { fails.push("article has no title"); }
       if (p.collections && !state.h2.some((t) => /collections/i.test(t))) { fails.push("no collections heading"); }
@@ -147,7 +155,7 @@ try {
         const s = await b.send("Page.captureScreenshot", {format: "png"});
         writeFileSync(join(shots, `${p.name}-${theme}.png`), Buffer.from(s.result.data, "base64"));
       }
-      results.push({page: p.name, theme, fails, info: p.search ? `${state.found}; ${state.items} items; viewer ${state.viewerW}x${state.viewerH}; canvas ${state.canvasW}x${state.canvasH}` : `${cover ? cover.checked : 0} elements checked`});
+      results.push({page: p.name, theme, fails, info: p.search ? `${state.found}; ${state.items} items; ${state.info} in ${(elapsed / 1000).toFixed(1)} s; viewer ${state.viewerW}x${state.viewerH}` : `${cover ? cover.checked : 0} elements checked`});
     }
   }
 } finally {

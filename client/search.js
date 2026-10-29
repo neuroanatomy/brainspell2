@@ -4,42 +4,24 @@ import * as login from "./src/login.js";
 import {el, setChildren, decoded} from "./annotation/dom.js";
 import {referenceNodes} from "./annotation/reference.js";
 import {mountSearchSelection, selectSlot, initHeaderLink} from "./annotation/collections.js";
+import {createAccumulator, createArticleReader, createPacer, createMapRenderer, createPool, createResultIds, loadSearch, orderCards, levelText, mapStatus} from "./annotation/coactivation.js";
 
 const params = new URLSearchParams(location.search);
-const sum = [];
-const [LR, PA, IS] = [45, 54, 45];
-let maxSum = 0;
+const SMOOTH = params.get("smooth") !== "0"; // ?smooth=0: no easing, no smoothing (the plain map, for comparison)
+const BATCH = 20; // results shown at a time
 let level = 50;
-let locations;
-let trc;
-const searchResults = [];
-let articlesDisplayed = 0;
+let trc = null;
+let trcReady = false;
 let selectionUI = null; // checkboxes and "add to collection" (logged-in users only)
-
-/**
- * @func configureROI
- * @description Configure the displacements necessary to create a small 3D ROI
- * @returnValue {array} The ROI displacements
- */
-
-const configureROI = () => {
-  // configure roi
-  const R = 3;
-  const roi = [];
-  let x, y, z;
-  for (x = -R; x <= R; x++) {
-    for (y = -R; y <= R; y++) {
-      for (z = -R; z <= R; z++) {
-        if (x * x + y * y + z * z <= R * R) {
-          roi.push([x, y, z]);
-        }
-      }
-    }
-  }
-
-  return roi;
-};
-const roi = configureROI();
+const pool = createPool({limit: 3});
+const acc = createAccumulator();
+const resultIds = createResultIds();
+const cards = new Map(); // objectId -> {id, PMID, Title, Reference, DOI}
+let renderer = null;
+let shown = 0;
+let loadingList = false;
+let listFailed = false;
+let mapState = {total: 0, done: false, failed: 0};
 
 const setupTouch = () => {
   console.log("[init] init()");
@@ -60,19 +42,39 @@ const getArticleCount = async () => {
   return n;
 };
 
-const displayMoreArticles = () => {
-  const batchSize = 20;
-  const narticles = Math.min(searchResults.length - articlesDisplayed, batchSize);
+// ---- data: Parse and the Solr cloud function ------------------------------------------------------------------------------------
 
-  if (narticles === 0) {
-    return;
-  }
+const paceSelect = createPacer(65); // the server allows 30 selects per second for everybody: we use about 15
 
-  console.log("append more articles", articlesDisplayed);
+const select = async ({q, start, rows}) => {
+  await paceSelect();
 
+  return Parse.Cloud.run("select", {
+    q,
+    defType: "edismax",
+    qf: "Abstract Title",
+    fl: "score,id", // only what is needed: the document ids and their scores
+    "q.op": "OR",
+    start,
+    rows
+  });
+};
+
+// Parse.serverURL and applicationId are set by login.init(), so they are read at call time
+const readArticles = (ids, keys) => createArticleReader({fetch: (...args) => fetch(...args), serverURL: Parse.serverURL, appId: Parse.applicationId})(ids, keys);
+
+// map pipeline: only the coordinates
+const fetchExperiments = async (ids) => (await readArticles(ids, ["PMID", "Experiments"])).map((a) => ({id: a.objectId, PMID: a.PMID, Experiments: a.Experiments}));
+// list pipeline: only what the list shows
+const fetchCards = async (ids) => (await readArticles(ids, ["PMID", "Title", "Reference", "DOI"])).map((a) => ({
+  id: a.objectId, pmid: a.PMID, title: a.Title, reference: a.Reference, doi: a.DOI
+}));
+
+// ---- the result list (infinite scroll, 20 at a time; records joined to the Solr scores by objectId) -----------------------------------
+
+const renderItems = (items) => {
   const list = document.getElementById("paper-list");
-  for(let i=0; i<narticles; i++) {
-    const {pmid, title, reference, doi, score} = searchResults[articlesDisplayed + i];
+  for (const {pmid, title, reference, doi, score} of items) {
     list.appendChild(el("li", {dataset: {pmid: String(pmid)}},
       selectSlot(),
       el("span", {class: "title"}, el("a", {href: `/article.html?pmid=${encodeURIComponent(pmid)}`}, decoded(title))),
@@ -81,150 +83,69 @@ const displayMoreArticles = () => {
       " ",
       el("span", {class: "score"}, `(${Number(score) || 0}%)`)));
   }
-  articlesDisplayed += narticles;
   if (selectionUI) {
     selectionUI.refresh();
   }
-  console.log(articlesDisplayed);
 };
 
+const showMore = async () => {
+  if (loadingList) {
+    return;
+  }
+  const next = resultIds.prefix().slice(shown, shown + BATCH);
+  if (!next.length) {
+    return;
+  }
+  loadingList = true;
+  const gen = pool.generation();
+  try {
+    const missing = next.filter((id) => !cards.has(id));
+    if (missing.length) {
+      const got = await pool.run(() => fetchCards(missing), {priority: 0});
+      got.forEach((c) => cards.set(c.id, c));
+    }
+    if (pool.isCancelled(gen)) {
+      return;
+    }
+    renderItems(orderCards(next, resultIds.scores, next.map((id) => cards.get(id)).filter(Boolean)));
+    shown += next.length;
+  } catch (err) {
+    if (!(err && err.cancelled)) {
+      listFailed = true;
+      console.log("could not load the results", err);
+      showNotice("Some results could not be loaded. Reload the page to try again.");
+    }
+  } finally {
+    loadingList = false;
+  }
+  displayArticles();
+};
+
+/** Show more results when the end of the list is on the screen (also called on scroll). */
 const displayArticles = () => {
   const {scrollTop, clientHeight: contentHeight} = document.querySelector("html");
   const paperListBottom = document.querySelector("#paper-list").getBoundingClientRect().bottom;
 
-  if (paperListBottom < scrollTop + contentHeight) {
-    displayMoreArticles();
-    setTimeout(displayArticles, 1000);
+  if (!listFailed && paperListBottom < scrollTop + contentHeight) {
+    showMore();
   }
 };
 
-const queryArticlesSlice = async (res) => {
-  var Articles = Parse.Object.extend("Articles");
-  var query = new Parse.Query(Articles);
-  var ids = res.docs.map((o) => o.id);
-  query.containedIn("objectId", ids);
-  const res2 = await query.find();
+// ---- the map -----------------------------------------------------------------------------------------------------------------------
 
-  searchResults.push(...res2.map((a, i) => {
-    locations.push(a.get('Experiments'));
+const info = () => document.getElementById("viewer-info");
 
-    return {
-      pmid: a.get("PMID"),
-      title: a.get("Title"),
-      reference: a.get("Reference"),
-      doi: a.get("DOI"),
-      score: (100*res.docs[i].score/res.maxScore)|0
-    };
-  }));
-
-  displayArticles();
-
-  document.getElementById("viewer-info").textContent =
-    `${(100*(res.start+res.docs.length)/res.numFound)|0}% loaded...`;
-};
-
-const searchSlice = async (query, start, rows) => {
-  const solrQuery = {
-    q: query,
-    defType: "edismax",
-    qf: "Abstract Title",
-    fl: "* score",
-    "q.op": "OR"
-  };
-  if (typeof start !== 'undefined') {
-    solrQuery.start = start;
-    solrQuery.rows = rows;
+const showNotice = (message) => {
+  let n = document.getElementById("map-notice");
+  if (!n) {
+    n = el("p", {id: "map-notice", class: "ann-status error", role: "status"});
+    document.getElementById("viewer-container").appendChild(n);
   }
-  const res = await Parse.Cloud.run("select", solrQuery);
-
-  return res;
+  setChildren(n, message);
 };
 
-const _searchChunk = async (query, start, rows, resolve) => {
-  const res = await searchSlice(query, start, rows);
-
-  if (start === 0) {
-    document.getElementById('url').value = query;
-    setChildren(document.getElementById("paper-list"));
-    document.getElementById("num-found").textContent = `${Number(res.numFound) || 0} articles found`;
-  }
-
-  await queryArticlesSlice(res);
-
-  start = res.start + rows;
-
-  if ( res.docs.length >= rows) {
-    setTimeout(() => {
-      _searchChunk(query, start, rows, resolve);
-    }, 250);
-  } else {
-    return resolve();
-  }
-};
-
-const search = async (query) => {
-  const [start, rows] = [0, 10];
-
-  await new Promise((resolve) => {
-    _searchChunk(query, start, rows, resolve);
-  });
-};
-
-const newSearch = (query) => {
-  location.href = `search.html?q=${encodeURIComponent(query)}`;
-};
-
-const initAggregateVolume = () => {
-  // init query volume
-  let i;
-  for (i = 0; i < LR * PA * IS; i++) {
-    sum[i] = 0;
-  }
-};
-
-const aggregateLocation = (exp) => {
-  // update the sum[] volume
-  if (exp === null || exp.length === 0) {
-    return;
-  }
-  for (let i = 0; i < exp.length; i++) {
-    if (exp[i].locations.length === 0) { continue; }
-
-    for (let j = 0; j < exp[i].locations.length; j++) {
-      let coord = exp[i].locations[j].split(",");
-      coord = [
-        Math.floor(coord[0] / 4 + 22),
-        Math.floor(coord[1] / 4 + 31),
-        Math.floor(coord[2] / 4 + 17.5)
-      ];
-      for (let k = 0; k < roi.length; k++) {
-        //[x, y, z] = roi.map((o, col) => (o+coord[col])|0);
-        const [x, y, z] = [
-          Math.floor(roi[k][0] + coord[0]),
-          Math.floor(roi[k][1] + coord[1]),
-          Math.floor(roi[k][2] + coord[2])
-        ];
-        if (x >= 0 && x < LR && y >= 0 && y < PA && z >= 0 && z < IS) {
-          sum[z * PA * LR + y * LR + x] += 1;
-          maxSum = Math.max(sum[z * PA * LR + y * LR + x], maxSum);
-        }
-      }
-    }
-  }
-};
-
-const aggregateLocations = () => {
-  console.log("aggregating", locations.length, "locations");
-  while (locations.length) {
-    aggregateLocation(locations.pop());
-  }
-};
-
-const handleLevelChange = () => {
-  level = Number(document.querySelector('#level').value);
-  document.querySelector('#levelValue').textContent = level + "%";
-  trc.cmap.level = maxSum * level / 100 + maxSum / 1000;
-  trc.updateMesh(trc.cmap);
+const updateStatus = () => {
+  setChildren(info(), mapStatus({papers: acc.papers, total: mapState.total, done: mapState.done, failed: mapState.failed}));
 };
 
 const _initTranslucentCluster = async () => {
@@ -236,41 +157,96 @@ const _initTranslucentCluster = async () => {
     brainColor: 'white'
   });
   await trc.init();
+  trc.createEmptyData([45, 54, 45]);
+  trcReady = true;
+  renderer.touch();
 };
 
-const _initAggregation = () => {
-  configureROI();
-  locations = [];
-  initAggregateVolume();
-  trc.createEmptyData([LR, PA, IS]);
-  document.querySelector('#level').value = level;
-  document.querySelector('#levelValue').textContent = level + "%";
-  document.querySelector('#level').addEventListener('input', handleLevelChange);
-};
-
-const _aggregate = () => {
-  console.log("_aggregate");
-  const timer = setInterval(() => {
-    aggregateLocations();
-    trc.updateMesh({
-      data: sum,
-      dim: [LR, PA, IS],
-      level: maxSum * level / 100
-    });
-  }, 2000);
-
-  return timer;
-};
-
-const _stopAggregation = (timer) => {
-  document.getElementById("viewer-info").textContent = "";
-  clearInterval(timer);
-  aggregateLocations();
-  trc.updateMesh({
-    data: sum,
-    dim: [LR, PA, IS],
-    level: maxSum * level / 100
+const setupMap = () => {
+  const levelInput = document.querySelector('#level');
+  const levelText_ = document.querySelector('#levelValue');
+  levelInput.value = level;
+  setChildren(levelText_, `${level}%`);
+  renderer = createMapRenderer({
+    target: acc.volume,
+    getMax: () => acc.max,
+    smooth: SMOOTH,
+    percent: level,
+    mesh: (field) => {
+      if (trcReady) {
+        trc.updateMesh(field);
+      }
+    },
+    onLevel: ({percent, level: l}) => {
+      setChildren(levelText_, acc.max > 0 ? levelText(percent, l) : `${Math.round(percent)}%`);
+    }
   });
+  levelInput.addEventListener('input', () => {
+    level = Number(levelInput.value);
+    renderer.setPercent(level);
+  });
+};
+
+const runSearch = async (query) => {
+  const gen = pool.generation();
+  let first = true;
+  try {
+    const res = await loadSearch({
+      query,
+      pool,
+      select,
+      fetchExperiments,
+      onPage: (page) => {
+        if (pool.isCancelled(gen)) {
+          return;
+        }
+        if (first) {
+          first = false;
+          document.getElementById('url').value = query;
+          setChildren(document.getElementById("paper-list"));
+          mapState.total = Number(page.numFound) || 0;
+          setChildren(document.getElementById("num-found"), `${mapState.total} articles found`);
+        }
+        resultIds.addPage(page);
+        displayArticles();
+        if (shown === 0 && !loadingList) {
+          showMore();
+        }
+      },
+      onPapers: (articles) => {
+        if (pool.isCancelled(gen)) {
+          return;
+        }
+        articles.forEach((a) => acc.add(a.Experiments));
+        updateStatus();
+        renderer.touch();
+      },
+      onFail: ({what, start, error}) => {
+        mapState.failed++;
+        console.log("search request failed", what, start, error);
+        showNotice("Some data could not be loaded (rate limit or network). The map and the list may be incomplete.");
+        updateStatus();
+      }
+    });
+    if (pool.isCancelled(gen)) {
+      return;
+    }
+    mapState.total = res.numFound;
+    mapState.done = true;
+    updateStatus();
+    renderer.touch();
+  } catch (err) {
+    if (!(err && err.cancelled)) {
+      console.log("search failed", err);
+      setChildren(document.getElementById("num-found"), "The search failed. Please try again.");
+      setChildren(info(), "");
+    }
+  }
+};
+
+const newSearch = (query) => {
+  pool.cancel();
+  location.href = `search.html?q=${encodeURIComponent(query)}`;
 };
 
 export const init = async () => {
@@ -278,21 +254,28 @@ export const init = async () => {
   // no inline onchange in the html (Content-Security-Policy)
   document.getElementById("url").addEventListener("change", (e) => newSearch(e.target.value));
   window.newSearch = newSearch;
+  window.addEventListener("pagehide", () => {
+    pool.cancel();
+    if (renderer) {
+      renderer.stop();
+    }
+  });
 
   initHeaderLink();
   selectionUI = mountSearchSelection({list: document.getElementById("paper-list"), toolbar: document.getElementById("selection-toolbar")});
+  setupMap();
+  document.addEventListener('scroll', displayArticles);
 
-  await getArticleCount();
-  await _initTranslucentCluster();
-  _initAggregation();
-  const timer = _aggregate();
-  await search(params.get('q'));
-  _stopAggregation(timer);
-
-  document.addEventListener(
-    'scroll',
-    displayArticles
-  );
+  // the viewer starts while the first results are on their way: nothing waits for it
+  const viewer = _initTranslucentCluster().catch((err) => {
+    console.log("viewer failed", err);
+  });
+  getArticleCount().catch((err) => console.log("count failed", err));
+  const q = params.get('q');
+  if (q) {
+    await runSearch(q);
+  }
+  await viewer;
 };
 
 export const start = async () => {

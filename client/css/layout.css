@@ -245,6 +245,18 @@ img.button.icon-sm {
   left: var(--space-1);
   z-index: var(--z-overlay);
   pointer-events: none;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* the legend of the slider ("50% = at least 124 overlapping peaks") and the notice about partial data */
+#levelValue {
+  margin-left: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+#map-notice {
+  margin: var(--space-1) 0 0;
 }
 
 .linkNoULine {

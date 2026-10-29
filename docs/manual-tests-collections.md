@@ -19,7 +19,7 @@ Renaming a collection is not available (not in the frozen API, plan 4); do not l
 | # | Step | Expected |
 |---|---|---|
 | A1 | Open `search.html?q=memory`, scroll until more than 40 results are loaded. Tick a few boxes in the first batch, keep scrolling so the next 20 are appended. | Every item, including appended ones, has a checkbox; the ticks made earlier are still ticked; the counter ("3 articles selected") is right. |
-| A2 | The 3D coactivation viewer, the progress text ("n% loaded..."), the level slider and the result list. | Work exactly as before (checkboxes do not move or hide anything). |
+| A2 **(RISK)** | `search.html?q=%22cognition%22` (445 papers), watch the 3D map and the list. | The first 20 results appear within about a second, the map appears and grows while "Map from n of 445 papers" counts up, then "Map from 445 papers" (a few seconds in all). Beside the slider: "50% = at least N overlapping peaks"; moving the slider changes the map smoothly and N. `&smooth=0` shows the plain, unsmoothed map at once. Try a query with no results ("zzzqqq": "0 articles found", "Map from 0 papers"), one with quotes or `&`, and "working memory" (1753 papers, about 4 s, no error notice). Scroll the list: 20 more at a time. Checkboxes do not move or hide anything. |
 | A3 | "Select all". | All loaded items are ticked (not results not yet loaded). Scroll: newly appended items are not ticked until selected again. "Select none" clears all. |
 | A4 | Tick 3, "Add to collection (3)", "Create new collection...", press Create with an empty name. | Message "The name must have 1 to 100 characters"; nothing sent (Network tab). |
 | A5 | Type a name, press Enter (or Create). | "Added 3 articles to <name>"; ticks are cleared; the menu closed. |

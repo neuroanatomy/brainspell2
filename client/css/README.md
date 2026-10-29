@@ -127,3 +127,9 @@ were compared, then the page scripts were grepped for ids and classes they use. 
 (`https://doi.org/<DOI>`, validated with `10.\d{4,9}/\S+`, percent-encoded, `target=_blank rel="noopener noreferrer"`). The article page shows the authors once (from `Authors`)
 and the citation from the year on as a second muted line; lists (search, home) keep the one-line reference with the journal part linked. A missing or placeholder
 DOI gives plain text. The class `.ref-link` is a normal link (no extra style).
+
+## The search map legend
+
+`#viewer-info` (overlay, top left of the map) says what is shown ("Map from 150 of 445 papers", then "Map from 445 papers"); `#levelValue` next to the slider gives the
+absolute meaning ("50% = at least 124 overlapping peaks"); `#map-notice` (class `ann-status error`) reports partial data. They use `--font-size-xs/sm`, `--color-text-muted`,
+`--space-*` and `--z-overlay`; nothing in them is hard-coded. See `docs/coactivation-map.md`.
