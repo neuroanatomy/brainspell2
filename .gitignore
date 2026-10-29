@@ -4,3 +4,4 @@ node_modules
 config.json
 logs
 server/history.log
+server/txt.txt
