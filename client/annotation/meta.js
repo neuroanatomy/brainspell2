@@ -24,7 +24,7 @@ export const renderMeta = (ctx) => {
   const root = el("div", {class: "meta"}, el("h2", null, "Study details"), spaceRow, nRow);
   const spaceStatus = createStatus();
   const nStatus = createStatus();
-  const input = el("input", {type: "number", min: "1", max: "100000", step: "1", class: "nsubjects-input", "aria-label": "Number of subjects"});
+  const input = el("input", {type: "number", min: "1", max: "100000", step: "1", class: "nsubjects-input", id: "nsubjects-input"});
 
   const setSpace = async (space) => {
     const res = await runAction(spaceStatus, () => ctx.call("setStereoSpace", {pmid: ctx.pmid, space}));
@@ -50,11 +50,12 @@ export const renderMeta = (ctx) => {
 
       return;
     }
-    const buttons = SPACES.map((s) => el("button", {type: "button", class: `vote${st.mine === s ? " mine" : ""}`,
-      "aria-pressed": String(st.mine === s), title: st.mine === s ? "Click to retract" : `Vote ${s}`,
+    const buttons = SPACES.map((s) => el("button", {type: "button", class: `seg${st.mine === s ? " pressed" : ""}`,
+      "aria-pressed": String(st.mine === s), title: st.mine === s ? "Click to retract your vote" : `Vote ${s}`,
       onclick: () => setSpace(st.mine === s ? null : s)}, `${s} ${st[s] || 0}`));
     spaceStatus.watch(buttons);
-    setChildren(spaceRow, el("span", {class: "label"}, "Stereotaxic space: "), buttons, spaceStatus.element);
+    setChildren(spaceRow, el("span", {class: "label"}, "Stereotaxic space: "),
+      el("span", {class: "segmented", role: "group", "aria-label": "Stereotaxic space"}, buttons), spaceStatus.element);
   };
 
   const drawN = () => {
@@ -67,7 +68,7 @@ export const renderMeta = (ctx) => {
     }
     if (ctx.canWrite()) {
       input.value = ns.mine === null || typeof ns.mine === "undefined" ? "" : String(ns.mine);
-      const save = el("button", {type: "button", class: "vote", onclick: () => {
+      const save = el("button", {type: "button", class: "btn-primary", onclick: () => {
         const n = parseSubjects(input.value);
         if (n === null) {
           nStatus.error({code: 142, message: "enter a whole number between 1 and 100000"});
@@ -78,10 +79,10 @@ export const renderMeta = (ctx) => {
       }}, "Save");
       const buttons = [save];
       if (ns.mine !== null && typeof ns.mine !== "undefined") {
-        buttons.push(el("button", {type: "button", class: "vote retract", onclick: () => setN(null)}, "Retract"));
+        buttons.push(el("button", {type: "button", class: "retract", onclick: () => setN(null)}, "Retract my vote"));
       }
       nStatus.watch([...buttons, input]);
-      parts.push(" ", input, buttons, nStatus.element);
+      parts.push(el("label", {class: "muted", for: "nsubjects-input"}, " Your vote: "), input, buttons, nStatus.element);
     }
     setChildren(nRow, parts);
   };

@@ -37,107 +37,221 @@
   text-align: center;
 }
 
-/* ==== tag-chip (legacy markup, replaced in stage 2) ====================================================== */
-.tag {
-  display: inline-block;
-  padding: var(--space-1) var(--space-2);
-  margin: var(--space-1) 0;
-  border-radius: var(--radius-round);
-  border: var(--border-width) solid var(--color-border-control);
-  background: var(--color-surface-raised);
+/* ==== tag-chip: MeSH headings and ontology tags ======================================================== */
+.chips,
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1-5);
 }
 
-.bal-none { background: var(--color-surface-raised); }
-.bal-good,
-.bal-ok { border-color: var(--color-vote-agree); }
-.bal-tie { border-color: var(--color-vote-tie); }
-.bal-poor,
-.bal-bad { border-color: var(--color-vote-disagree); }
+.tag-chips {
+  display: contents;
+}
 
-.table-ok.bal-good,
-.table-ok.bal-ok,
-.table-ok.bal-tie,
-.table-ok.bal-poor,
-.table-ok.bal-bad,
-.table-ok.bal-none {
-  background: none;
-  border-color: transparent;
+.chip-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+/* the left band shows the balance of votes; the "+a -d" count is the second cue (colour is never the only one) */
+button.tag.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  min-height: var(--hit-area);
+  padding: 0 var(--space-2);
+  border-left-width: var(--border-width-band);
+  border-left-color: var(--color-border-control);
+  background: var(--color-surface-raised);
+  text-align: left;
+}
+
+button.tag.chip.bal-good,
+button.tag.chip.bal-ok {
+  border-left-color: var(--color-vote-agree);
+}
+
+button.tag.chip.bal-tie {
+  border-left-color: var(--color-vote-tie);
+}
+
+button.tag.chip.bal-poor,
+button.tag.chip.bal-bad {
+  border-left-color: var(--color-vote-disagree);
+}
+
+button.tag.chip[aria-expanded="true"],
+button.tag.chip.mine {
+  border-top-color: var(--color-accent);
+  border-right-color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+}
+
+.chip .counts {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* "+ Add tag": a dashed, quiet chip */
+button.chip-add {
+  min-height: var(--hit-area);
+  padding: 0 var(--space-2);
+  border-style: dashed;
+  border-color: var(--color-border-control);
+  color: var(--color-text-muted);
 }
 
 .mesh-list {
-  line-height: 2rem;
+  margin-top: var(--space-2);
 }
 
-.mesh-item {
-  display: inline-block;
-  margin-right: var(--space-3);
-  white-space: nowrap;
+.tags {
+  margin: var(--space-2) 0;
 }
 
-.vote-controls {
-  margin-left: var(--space-1);
+/* ==== vote-popup: one small popup under a chip ================================================================== */
+.vote-popup {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: var(--z-popup);
+  margin-top: var(--space-1);
+  width: var(--popup-width);
+  max-width: calc(100vw - 2 * var(--space-4));
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border-control);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-popup);
+  text-align: left;
+  white-space: normal;
 }
 
-button.vote,
-button.tag-add,
-button.onto,
-button.concept,
-button.close {
-  margin-left: var(--space-1);
+.vote-popup-head {
+  margin-bottom: var(--space-2);
 }
 
-button.vote.mine,
+.vote-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+.count-up {
+  color: var(--color-vote-agree);
+}
+
+.count-down {
+  color: var(--color-vote-disagree);
+}
+
+.vote-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1-5);
+}
+
+.vote-popup button.vote-btn.pressed,
+.segmented button.seg.pressed {
+  background: var(--color-selected-bg);
+  border-color: var(--color-accent);
+}
+
+.vote-info {
+  margin-top: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+.vote-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--space-2);
+}
+
+@media (max-width: 40rem) {
+  /* on a phone the popup is a sheet at the bottom: it can never run off the screen */
+  .vote-popup {
+    position: fixed;
+    top: auto;
+    left: var(--space-4);
+    right: var(--space-4);
+    bottom: var(--space-4);
+    width: auto;
+  }
+}
+
+/* ==== segmented: two toggle buttons in one box ====================================================================== */
+.segmented {
+  display: inline-flex;
+}
+
+.segmented button.seg {
+  border-radius: 0;
+  margin: 0;
+}
+
+.segmented button.seg + button.seg {
+  margin-left: calc(-1 * var(--border-width));
+}
+
+.segmented button.seg:first-child {
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+
+.segmented button.seg:last-child {
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+.segmented button.seg.pressed {
+  position: relative;
+  z-index: var(--z-base);
+}
+
+.table-ok {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
+}
+
+.count {
+  font-size: var(--font-size-xs);
+  margin-right: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+/* ==== tag picker (add a tag from an ontology) ====================================================================== */
+.tag-picker {
+  flex-basis: 100%;
+  margin-top: var(--space-1-5);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--color-border-control);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  max-width: 35rem;
+}
+
+.tag-ontologies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1-5);
+  margin-bottom: var(--space-1-5);
+}
+
 button.onto.active {
   border-color: var(--color-accent);
   background: var(--color-selected-bg);
 }
 
-.count {
-  font-size: var(--font-size-xs);
-  margin-left: var(--space-1-5);
-  color: var(--color-text-muted);
-}
-
-.table-ok {
-  margin: var(--space-1-5) 0;
-}
-
-.tags {
-  margin: var(--space-1-5) 0 var(--space-3);
-}
-
-.tag-chips {
-  display: inline;
-}
-
-button.tag.chip {
-  margin-right: var(--space-1-5);
-}
-
-button.tag.chip.mine {
-  box-shadow: 0 0 0 var(--border-width) var(--color-accent);
-}
-
-.tag .counts {
-  font-size: var(--font-size-xs);
-}
-
-.tag-popup,
-.tag-picker {
-  margin-top: var(--space-1-5);
-  padding: var(--space-2) var(--space-3);
-  border: var(--border-width) solid var(--color-border);
-  background: var(--color-surface);
-  max-width: 560px;
-}
-
-.tag-ontologies {
-  margin-bottom: var(--space-1-5);
-}
-
 input.tag-filter {
   display: block;
-  width: calc(100% - var(--space-4));
+  width: 100%;
   margin-bottom: var(--space-1-5);
 }
 
@@ -149,23 +263,32 @@ ul.tag-concepts {
   list-style: none;
   margin: 0;
   padding: 0;
-  max-height: 220px;
+  max-height: 14rem;
   overflow: auto;
   text-align: left;
-}
-
-ul.tag-concepts li {
-  padding: var(--space-1) 0;
 }
 
 button.concept {
   width: 100%;
   text-align: left;
-  margin-left: 0;
+  border-color: transparent;
+  background: transparent;
+}
+
+button.concept:hover:not(:disabled) {
+  border-color: var(--color-border-control);
 }
 
 .meta-row {
-  margin: var(--space-1-5) 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
+}
+
+.meta-row .label {
+  min-width: 11rem;
 }
 
 /* ==== comments =========================================================================================== */
