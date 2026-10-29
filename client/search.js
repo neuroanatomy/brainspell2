@@ -4,6 +4,8 @@ import * as login from "./src/login.js";
 import {el, setChildren, decoded} from "./annotation/dom.js";
 import {referenceNodes} from "./annotation/reference.js";
 import {mountSearchSelection, selectSlot, initHeaderLink} from "./annotation/collections.js";
+import * as surfacenets from "./node_modules/translucent-viewer/surfacenets.js";
+import {buildGlb, exportFilename} from "./annotation/model-export.js";
 import {createAccumulator, createArticleReader, createPacer, createMapRenderer, createPool, createResultIds, loadSearch, orderCards, levelText, mapStatus} from "./annotation/coactivation.js";
 
 const params = new URLSearchParams(location.search);
@@ -187,6 +189,80 @@ const setupMap = () => {
   });
 };
 
+// ---- 3D model export (.glb) --------------------------------------------------------------------------------------------------------
+
+/** The translucent brain of the live viewer scene as arrays (viewer units), or null while it is not loaded. */
+const brainGeometry = () => {
+  const scene = trc && trc.tr && trc.tr.scene;
+  const mesh = scene && Array.from(scene.children).find((o) => o.isMesh && o !== trc.surfacemesh && o.material && o.material.isShaderMaterial &&
+    o.geometry && o.geometry.vertices && o.geometry.vertices.length > 1000);
+  if (!mesh) {
+    return null;
+  }
+  const {vertices, faces} = mesh.geometry;
+  const positions = new Float32Array(vertices.length * 3);
+  vertices.forEach((v, i) => {
+    positions[i * 3] = v.x; positions[i * 3 + 1] = v.y; positions[i * 3 + 2] = v.z;
+  });
+
+  return {positions, indices: faces.flatMap((f) => [f.a, f.b, f.c])};
+};
+
+const downloadBytes = (bytes, filename) => {
+  const url = URL.createObjectURL(new Blob([bytes], {type: "model/gltf-binary"}));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+};
+
+const exportStatus = (message, error = false) => {
+  const s = document.getElementById("export-status");
+  s.className = `ann-status${error ? " error" : ""}`;
+  setChildren(s, message);
+};
+
+const exportModel = async (query) => {
+  const button = document.getElementById("export-glb");
+  button.disabled = true;
+  exportStatus("Preparing…");
+  await new Promise((r) => setTimeout(r, 30)); // let the message show before the (short) computation
+  try {
+    const brain = brainGeometry();
+    if (!brain) {
+      throw new Error("The brain is not loaded yet, try again in a moment");
+    }
+    const bytes = buildGlb({
+      brain,
+      field: renderer.exportField(),
+      surfaceNets: surfacenets.init,
+      meta: {query, papers: acc.papers, total: mapState.total, sliderPercent: level}
+    });
+    downloadBytes(bytes, exportFilename(query, acc.papers));
+    exportStatus(`Downloaded (${(bytes.length / 1048576).toFixed(1)} MB)`);
+  } catch (err) {
+    console.log("export failed", err);
+    exportStatus(`The 3D model could not be created: ${err && err.message ? err.message : "unexpected error"}`, true);
+  } finally {
+    button.disabled = false;
+  }
+};
+
+const enableExport = (query) => {
+  const button = document.getElementById("export-glb");
+  if (!button) {
+    return;
+  }
+  if (acc.papers > 0) {
+    button.disabled = false;
+    button.title = "Download the map as a 3D model (glb)";
+    button.onclick = () => exportModel(query);
+  }
+};
+
 const runSearch = async (query) => {
   const gen = pool.generation();
   let first = true;
@@ -235,6 +311,7 @@ const runSearch = async (query) => {
     mapState.done = true;
     updateStatus();
     renderer.touch();
+    enableExport(query);
   } catch (err) {
     if (!(err && err.cancelled)) {
       console.log("search failed", err);

@@ -264,6 +264,17 @@ export const createMapRenderer = ({target, getMax, mesh, onLevel = () => {}, smo
       wanted = p;
       scheduler.kick();
     },
+    /** The final volume (the target, smoothed like the screen when smoothing is on) and the strongest count, for the 3D model export. */
+    exportField: () => {
+      const data = new Float32Array(target.length);
+      if (smooth) {
+        gaussianSmooth(target, data, new Float32Array(target.length), DIM, sigma);
+      } else {
+        data.set(target);
+      }
+
+      return {data, dim: DIM, max: getMax()};
+    },
     /** show the target at once (e.g. the search is complete and the page is idle) */
     flush: () => {
       scheduler.stop();

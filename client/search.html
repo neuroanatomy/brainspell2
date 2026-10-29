@@ -58,7 +58,12 @@
             <div id="viewer-container">
               <div id="viewer-info"></div>
               <div id="viewer"></div>
-              <input type="range" id="level" /><span id="levelValue"></span><br />
+              <input type="range" id="level" /><span id="levelValue"></span>
+              <div class="export-row">
+                <button type="button" id="export-glb" disabled title="Available when the map is complete"
+                  aria-label="Download the 3D model of the map as a glb file">Download 3D model (.glb)</button>
+                <span id="export-status" class="ann-status" role="status"></span>
+              </div>
             </div>
 
             <!-- Search -->

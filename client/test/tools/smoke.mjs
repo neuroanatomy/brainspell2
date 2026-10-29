@@ -15,12 +15,13 @@
  *   - a console error that is not in the allow-list below;
  *   - the search page without "N articles found", without result items, with a zero-size #viewer or canvas, or whose map is not complete
  *     ("Map from N papers" in #viewer-info, N = the number found) within 10 s (searches: prosodic, "cognition" = 445 papers);
+ *   - the search page without an enabled "Download 3D model" button, or (for "cognition") a click that does not download a valid GLB;
  *   - any visible link, button, input, heading, list item or table cell that is covered by another element (stacking bugs);
  *   - the article page without a title, the collections page without its heading.
  * Prints a PASS/FAIL table with the reasons. Needs Node >= 22 (global fetch and WebSocket) and Google Chrome.
  */
 import {spawn} from "node:child_process";
-import {mkdtempSync, mkdirSync, writeFileSync} from "node:fs";
+import {mkdtempSync, mkdirSync, writeFileSync, readdirSync, readFileSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 
@@ -66,7 +67,7 @@ return {checked: n, covered: bad.slice(0, 5), count: bad.length}; })()`;
 const STATE = `(() => { const q = (s) => document.querySelector(s); const v = q("#viewer"); const c = v && v.querySelector("canvas");
 return {found: (q("#num-found") || {}).textContent || "", items: document.querySelectorAll("#paper-list li").length,
   viewerH: v ? v.clientHeight : -1, viewerW: v ? v.clientWidth : -1, canvasH: c ? c.height : -1, canvasW: c ? c.width : -1,
-  info: (q("#viewer-info") || {}).textContent || "", legend: (q("#levelValue") || {}).textContent || "", title: (q("h2") || {}).textContent || "", h2: [...document.querySelectorAll("h2")].map((h) => h.textContent), theme: document.documentElement.getAttribute("data-theme") }; })()`;
+  info: (q("#viewer-info") || {}).textContent || "", legend: (q("#levelValue") || {}).textContent || "", exportEnabled: !!q("#export-glb") && !q("#export-glb").disabled, title: (q("h2") || {}).textContent || "", h2: [...document.querySelectorAll("h2")].map((h) => h.textContent), theme: document.documentElement.getAttribute("data-theme") }; })()`;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -98,8 +99,10 @@ const launch = async () => {
   };
   const send = (method, params = {}) => new Promise((r) => { const i = ++id; pending.set(i, r); ws.send(JSON.stringify({id: i, method, params})); });
   await send("Page.enable"); await send("Runtime.enable"); await send("Log.enable");
+  const downloads = mkdtempSync(join(tmpdir(), "smoke-dl-"));
+  await send("Browser.setDownloadBehavior", {behavior: "allow", downloadPath: downloads});
 
-  return {send, logs, close: () => { ws.close(); chrome.kill(); }};
+  return {send, logs, downloads, close: () => { ws.close(); chrome.kill(); }};
 };
 
 const evalJs = async (b, expr) => {
@@ -140,6 +143,23 @@ try {
         const n = Number((/^(\d+) articles found/.exec(state.found) || [])[1]);
         if (!m) { fails.push(`the map is not complete (status "${state.info}")`); } else if (Number(m[1]) !== n) { fails.push(`map from ${m[1]} papers but ${n} found`); }
         if (!/overlapping peaks/.test(state.legend)) { fails.push(`no legend for the level ("${state.legend}")`); }
+        if (!state.exportEnabled) { fails.push("the 3D model button is missing or disabled after the map is complete"); }
+        if (p.bigMap && state.exportEnabled) {
+          // click it: a valid GLB must be downloaded
+          const before = new Set(readdirSync(b.downloads));
+          await evalJs(b, "document.querySelector('#export-glb').click()");
+          let got = null;
+          for (let i = 0; i < 40 && !got; i++) {
+            await sleep(250);
+            got = readdirSync(b.downloads).find((n) => n.endsWith(".glb") && !before.has(n)) || null;
+          }
+          if (!got) { fails.push("the 3D model download did not start"); } else {
+            const bytes = readFileSync(join(b.downloads, got));
+            const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+            if (bytes.subarray(0, 4).toString() !== "glTF" || dv.getUint32(8, true) !== bytes.length || dv.getUint32(4, true) !== 2) { fails.push(`the downloaded file is not a valid GLB (${got}, ${bytes.length} bytes)`); }
+            state.glb = `${got}, ${(bytes.length / 1024).toFixed(0)} KB`;
+          }
+        }
         if (elapsed > 10000) { fails.push(`map took ${(elapsed / 1000).toFixed(1)} s (limit 10 s)`); }
       }
       if (p.article && !state.h2.length) { fails.push("article has no title"); }
@@ -155,7 +175,7 @@ try {
         const s = await b.send("Page.captureScreenshot", {format: "png"});
         writeFileSync(join(shots, `${p.name}-${theme}.png`), Buffer.from(s.result.data, "base64"));
       }
-      results.push({page: p.name, theme, fails, info: p.search ? `${state.found}; ${state.items} items; ${state.info} in ${(elapsed / 1000).toFixed(1)} s; viewer ${state.viewerW}x${state.viewerH}` : `${cover ? cover.checked : 0} elements checked`});
+      results.push({page: p.name, theme, fails, info: p.search ? `${state.found}; ${state.items} items; ${state.info} in ${(elapsed / 1000).toFixed(1)} s;${state.glb ? ` glb ${state.glb};` : ""} viewer ${state.viewerW}x${state.viewerH}` : `${cover ? cover.checked : 0} elements checked`});
     }
   }
 } finally {

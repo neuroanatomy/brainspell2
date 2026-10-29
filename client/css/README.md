@@ -133,3 +133,5 @@ DOI gives plain text. The class `.ref-link` is a normal link (no extra style).
 `#viewer-info` (overlay, top left of the map) says what is shown ("Map from 150 of 445 papers", then "Map from 445 papers"); `#levelValue` next to the slider gives the
 absolute meaning ("50% = at least 124 overlapping peaks"); `#map-notice` (class `ann-status error`) reports partial data. They use `--font-size-xs/sm`, `--color-text-muted`,
 `--space-*` and `--z-overlay`; nothing in them is hard-coded. See `docs/coactivation-map.md`.
+
+`.export-row` (layout.css) holds the "Download 3D model (.glb)" button and its status (`#export-status`, class `ann-status`); see `docs/export-glb.md`.

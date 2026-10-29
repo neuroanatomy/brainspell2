@@ -1,0 +1,35 @@
+<!doctype html>
+<!-- Reference viewer for exported models (a test tool, NOT part of the site): three.js r119 + GLTFLoader.
+     /test/tools/glb-viewer.html?model=<path of a .glb served by the same server>&view=front|top|side|iso&bg=dark|white
+     Sets window.__ready = true (or window.__error) when the first frame is drawn. Driven by glb-render.mjs. -->
+<html><head><meta charset="utf-8"><title>glb viewer</title></head>
+<body style="margin:0"><div id="v" style="width:800px;height:800px"></div>
+<script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r119/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r119/examples/js/loaders/GLTFLoader.js"></script>
+<script>
+const p = new URLSearchParams(location.search);
+const view = p.get("view") || "front";
+const dark = p.get("bg") !== "white";
+const renderer = new THREE.WebGLRenderer({antialias: true, preserveDrawingBuffer: true});
+renderer.setSize(800, 800);
+renderer.setClearColor(dark ? 0x111111 : 0xffffff, 1);
+document.getElementById("v").appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.add(new THREE.AmbientLight(0xffffff, 1));
+const camera = new THREE.PerspectiveCamera(30, 1, 0.01, 10);
+const D = 0.5;
+const pos = {front: [0, 0, D], top: [0, D, 0], side: [-D, 0, 0], iso: [-0.4, 0.4, 0.5]}[view];
+camera.position.set(...pos);
+camera.up.set(...(view === "top" ? [0, 0, 1] : [0, 1, 0]));
+camera.lookAt(0, 0, 0);
+new THREE.GLTFLoader().load(p.get("model"), (gltf) => {
+  scene.add(gltf.scene);
+  const info = [];
+  gltf.scene.traverse((o) => { if (o.isMesh) { const g = o.geometry; g.computeBoundingBox(); info.push(o.name + " " + g.attributes.position.count + " " + o.material.type + " transparent=" + o.material.transparent + " opacity=" + o.material.opacity); } });
+  window.__info = info;
+  const box = new THREE.Box3().setFromObject(gltf.scene);
+  window.__box = [box.min.toArray(), box.max.toArray()];
+  renderer.render(scene, camera);
+  requestAnimationFrame(() => { renderer.render(scene, camera); window.__ready = true; });
+}, undefined, (e) => { window.__error = String(e && e.message || e); });
+</script></body></html>
