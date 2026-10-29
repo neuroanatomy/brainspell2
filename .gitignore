@@ -5,3 +5,5 @@ config.json
 logs
 server/history.log
 server/txt.txt
+docs
+

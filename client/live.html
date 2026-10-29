@@ -1,0 +1,103 @@
+<html>
+<head>
+    <meta charset="utf-8">
+</head>
+
+<body>
+
+    <p>
+        This is a test completely unrelated to brainspell.
+    </p>
+    <p>
+        This thing connects to the parse server sitting at
+        brainspell.org. That parse server has live queries
+        activated for the class RealTime. Here, the client
+        subscribes to changes in RealTime matching {'name':
+        'T-Rex'}. Several event listeners are attached:
+        open, enter, create, update.
+    </p>
+    <p>
+        The following buttons can be used to create data
+        like {'name': [text]} (Enter Data); query data for
+        objects that match {'name': 'T-Rex'} (Query Data),
+        and to update data of the object that matches {
+        'name': 'T-Rex'} by adding {'impendingDoom': [text]}.
+    </p>
+    <p>
+        The results are displayed in the browser's console.
+    </p>
+
+    <button onclick="enterData()">Enter Data</button>
+    <button onclick="queryData()">Query Data</button>
+    <button onclick="updateData()">Update Data</button>
+
+    <div id="view">
+    </div>
+
+    <script src="https://npmcdn.com/parse@1.9.2/dist/parse.js"></script>
+
+    <script>
+    const parseAppId = 'rhg5U7ewkcZMsu4Cq8AnFWFwlZlJ12amn4bWFlG7';
+    Parse.initialize(parseAppId);
+    Parse.serverURL = 'https://brainspell.org/parse';
+    Parse.liveQueryServerURL = 'wss://brainspell.org';
+
+    // create a query
+    const RealTime = Parse.Object.extend("RealTime");
+    const query = new Parse.Query(RealTime);
+    query.equalTo('name', 'T-Rex');
+
+    // subscribe to it live
+    const subscription = query.subscribe();
+    subscription.on('create', (realtime) => {
+        console.log("Subscribed creation:", realtime.get('name'), realtime.get('random'), realtime);
+    });
+    subscription.on('update', (realtime) => {
+        console.log("Subscribed update:");
+        console.log(realtime.toJSON());
+    });
+    subscription.on('open', () => {
+        console.log('Subscribed openning');
+    });
+    subscription.on('enter', (object) => {
+        console.log('Subscribed object entering');
+    });
+    //subscription.unsubscribe();
+
+    function enterData() {
+        const txt = prompt("Say something", "something");
+        const RealTime = Parse.Object.extend("RealTime");
+        const rt = new RealTime();
+        const rnd = Math.random();
+        rt.set('name', txt);
+        rt.set('random', "" + rnd);
+        rt.save().then((res) => {
+            console.log("created", rt.id);
+        }).catch((e) => {
+            console.error("error:", e);
+        });
+    }
+    function queryData() {
+        const RealTime = Parse.Object.extend("RealTime");
+        const qq = new Parse.Query(RealTime);
+        qq.equalTo("name", "T-Rex");
+        qq.first().then((res) => {
+            console.log("User queried:", res.toJSON());
+        });
+    }
+    function updateData() {
+        const txt = prompt("Remember something", "mmm")
+        const RealTime = Parse.Object.extend("RealTime");
+        const qq = new Parse.Query(RealTime);
+        qq.equalTo("name", "T-Rex");
+        qq.first().then((res) => {
+            res.set("impendingDoom",txt);
+            console.log("User updated to:", res.toJSON());
+            return res.save();
+        });
+    }
+    </script>
+
+
+</body>
+</html>
