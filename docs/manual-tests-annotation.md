@@ -39,6 +39,7 @@ How the controls look now:
 | A11 | `?pmid=99999&mock=1`. | "Article 99999 is not in the database." then "This article is not in the database yet. Log in to add it."; no console error. |
 | A12 | `article.html` without pmid. | "No article selected." |
 | A13 | Network tab / console. | No request to the Parse server in mock mode (except `config.json`, a 404 is fine). |
+| A14 | Reference line (real article, e.g. `article.html?pmid=15895428`, needs the real server). | The authors appear once in bold; under them, in muted text, "(2005) Hum Brain Mapp 26(2):128-38" where only the journal part is a link to `https://doi.org/<DOI>` (opens in a new tab, tooltip "Open the paper via its DOI (doi.org)"). An article whose DOI is a placeholder ("Temporary DOI") shows the citation as plain text. In search results and on the home page the one-line reference is the same with the journal part linked. |
 
 ## B. Logged-in user (`?pmid=12345&mock=1&as=alice`)
 

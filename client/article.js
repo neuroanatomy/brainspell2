@@ -9,6 +9,7 @@ import {renderMeta} from "./annotation/meta.js";
 import {renderComments} from "./annotation/comments.js";
 import * as hooks from "./annotation/hooks.js";
 import {initHeaderLink} from "./annotation/collections.js";
+import {citationNodes} from "./annotation/reference.js";
 import * as tableEdit from "./annotation/table-edit.js";
 import * as addArticle from "./annotation/add-article.js";
 
@@ -117,9 +118,14 @@ const displayArticle = (root, art) => {
   const expShells = experiments.map(buildExperiment);
   const expRoot = el("div", {class: "experiments"}, el("h2", null, "Experiments"));
 
+  // line 2: the citation from the year on ("(2008) Neuroimage 41(2):535-43", linked to the DOI); the reference already starts with the authors
+  const citation = citationNodes(art.Reference || "", art.DOI, art.Authors || "");
+  const citationLine = citation.length ? el("div", {class: "article-citation muted"}, citation) : null;
+
   setChildren(root,
     el("h2", null, decoded(art.Title)),
-    el("b", null, decoded(`${authors} ${art.Reference || ""}`)),
+    el("b", {class: "article-authors"}, decoded(authors)),
+    citationLine,
     el("p", null, decoded(art.Abstract)),
     annStatus, meshSlot, metaSlot, expRoot, commentsSlot);
   expShells.forEach((s) => expRoot.appendChild(s.node));
