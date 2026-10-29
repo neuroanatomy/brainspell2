@@ -8,6 +8,9 @@ import {renderTags} from "./annotation/tags.js";
 import {renderMeta} from "./annotation/meta.js";
 import {renderComments} from "./annotation/comments.js";
 import * as hooks from "./annotation/hooks.js";
+import {initHeaderLink} from "./annotation/collections.js";
+import * as tableEdit from "./annotation/table-edit.js";
+import * as addArticle from "./annotation/add-article.js";
 
 const setupTouch = () => {
   console.log("configure touch");
@@ -34,6 +37,9 @@ let viewerFactory = async (elemId, locations) => {
   trl.init();
 };
 
+/** For the table editor: (re)build a viewer in an element. Goes through the replaceable factory. */
+const createViewer = (elemId, locations) => viewerFactory(elemId, locations);
+
 export const setViewerFactory = (fn) => {
   viewerFactory = fn;
 };
@@ -48,28 +54,31 @@ const coordRow = (loc) => el("tr", null, String(loc).split(",").map((v) => el("t
  */
 const buildExperiment = (ex, i) => {
   const annSlot = el("div", {class: "exp-annotations"});
+  const titleNode = el("b", {class: "noEmptyWithPlaceholder exp-title", placeholder: "No Title"}, decoded(ex.title));
+  const captionNode = el("span", {class: "noEmptyWithPlaceholder exp-caption", placeholder: "No Caption"}, decoded(ex.caption));
   const node = el("div", {class: "experiment"},
-    el("b", null, `${i}.`), " ",
-    el("b", {class: "noEmptyWithPlaceholder", placeholder: "No Title"}, decoded(ex.title)), el("br"),
-    el("span", {class: "noEmptyWithPlaceholder", placeholder: "No Caption"}, decoded(ex.caption)), el("br"),
-    annSlot);
+    el("b", null, `${i}.`), " ", titleNode, el("br"), captionNode, el("br"), annSlot);
   const locations = ex.locations || [];
+  // nodes the table editor (hooks) may use: title, caption, viewer and coordinates cell
+  const slots = {title: titleNode, caption: captionNode, viewer: null, coords: null};
   if (locations.length > 0) {
-    node.appendChild(el("table", null, el("tr", null,
-      el("td", {style: "vertical-align:top"},
-        el("div", {id: `viewer${i}`, style: "width:480px;height:480px; border:1px solid #111"})),
-      el("td", {style: "vertical-align:top; border:1px solid #2d2d2d"},
+    slots.viewer = el("div", {id: `viewer${i}`, style: "width:480px;height:480px; border:1px solid #111"});
+    // exp-readonly: hidden by the table editor (table-edit.css) while it shows its editable table
+    slots.coords = el("td", {class: "exp-coords", style: "vertical-align:top; border:1px solid #2d2d2d"},
+      el("div", {class: "exp-readonly"},
         el("table", {class: "coords-table"}, el("thead", null, el("tr", null,
           el("th", null, el("span", {class: "text"}, "X")),
           el("th", null, el("span", {class: "text"}, "Y")),
           el("th", null, el("span", {class: "text"}, "Z"))))),
         el("div", {id: "table-wrapper"}, el("div", {id: "table-scroll"},
-          el("table", {class: "coords-table"}, el("tbody", null, locations.map(coordRow)))))))));
+          el("table", {class: "coords-table"}, el("tbody", null, locations.map(coordRow)))))));
+    node.appendChild(el("table", null, el("tr", null,
+      el("td", {style: "vertical-align:top"}, slots.viewer), slots.coords)));
   } else {
-    node.appendChild(el("p", {class: "muted empty-table"}, "This table has no coordinates."));
+    node.appendChild(el("p", {class: "muted empty-table exp-readonly"}, "This table has no coordinates."));
   }
 
-  return {node, annSlot, hasLocations: locations.length > 0};
+  return {node, annSlot, slots, hasLocations: locations.length > 0};
 };
 
 const startViewers = (experiments) => {
@@ -129,6 +138,18 @@ const displayArticle = (root, art) => {
         get rev() {
           return ctx ? ctx.ann.rev : 0;
         },
+        // false until getAnnotations has answered (the rev is not known before)
+        get annotationsLoaded() {
+          return !!ctx;
+        },
+        // the server's answer to a successful edit carries the new rev
+        setRev: (rev) => {
+          if (ctx) {
+            ctx.ann.rev = rev;
+          }
+        },
+        slots: shell.slots,
+        createViewer,
         reload: () => loadPage(root, pmid)
       });
     });
@@ -227,11 +248,14 @@ export const init = () => {
 };
 
 export const start = async () => {
+  tableEdit.register();
+  addArticle.register();
   try {
     await login.init();
   } catch (err) {
     console.log("login init failed", err);
   }
+  initHeaderLink();
   await init();
 };
 

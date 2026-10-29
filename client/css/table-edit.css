@@ -1,0 +1,119 @@
+/* Table editing, import dialog and add-article form (dark style consistent with style.css/annotation.css). */
+
+/* while the editor is on, the read-only table is replaced by the editable one */
+.experiment.te-active .exp-readonly {
+  display: none;
+}
+
+.experiment.te-active {
+  max-width: calc(480px + 3*61px + 110px);
+}
+
+.te-root {
+  margin-top: 4px;
+}
+
+.te-bar,
+.te-textform,
+.te-empty {
+  margin: 4px 0;
+}
+
+.te-btn {
+  margin: 0 4px 2px 0;
+  padding: 1px 8px;
+  cursor: pointer;
+}
+
+.te-scroll {
+  max-height: calc(480px - 60px);
+  overflow: auto;
+}
+
+.te-table {
+  border-collapse: collapse;
+}
+
+.te-table th,
+.te-table td {
+  padding: 1px 4px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.te-table tbody tr {
+  cursor: pointer;
+}
+
+.te-table tbody tr:hover {
+  background: #1f1f1f;
+}
+
+.te-table tr.te-selected {
+  background: #2a3a4a;
+}
+
+.te-table tr.te-new {
+  background: #1f2a1f;
+}
+
+.te-actions .te-btn {
+  min-width: 1.6em;
+  padding: 0 4px;
+}
+
+.te-cell {
+  width: 4.5em;
+  background: #111;
+  color: inherit;
+  border: 1px solid #555;
+  text-align: center;
+}
+
+.te-text {
+  width: 100%;
+  box-sizing: border-box;
+  background: #111;
+  color: inherit;
+  border: 1px solid #555;
+}
+
+.te-import {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border: 1px solid #555;
+  background: #161616;
+}
+
+.te-import h4 {
+  margin: 0 0 4px;
+}
+
+.te-import-text {
+  width: 100%;
+  box-sizing: border-box;
+  background: #111;
+  color: inherit;
+  border: 1px solid #555;
+  font-family: monospace;
+}
+
+.te-import-preview {
+  margin-top: 6px;
+  max-height: 240px;
+  overflow: auto;
+}
+
+.te-import-rows td,
+.te-import-rows th {
+  padding: 0 8px;
+  text-align: right;
+}
+
+.add-article label {
+  display: inline-block;
+}
+
+.add-ntables {
+  width: 5em;
+}
