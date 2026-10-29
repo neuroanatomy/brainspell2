@@ -209,7 +209,7 @@ test("title and caption: edit, limits, plain text shown", async () => {
   assert.equal(s.title.byTag("b").length, 0);
   await s.root.buttons("Edit caption")[0].dispatch("click");
   const area = s.root.byTag("textarea")[0];
-  assert.equal(area.value, "Activations for task vs baseline");
+  assert.equal(area.value, "Activations for <b>task</b> vs baseline", "tags in a caption are text, not markup");
   area.value = "x".repeat(5001);
   await s.root.buttons("Save")[0].dispatch("click");
   assert.ok(s.root.textContent.includes("too long"));

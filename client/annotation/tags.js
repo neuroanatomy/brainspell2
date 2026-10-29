@@ -15,6 +15,9 @@ export const ONTOLOGY_LABELS = {
 const ONTOLOGIES = Object.keys(ONTOLOGY_LABELS);
 const MAX_LISTED = 200;
 
+/** A parent is shown only when it differs from the name (group terms have themselves as parent). */
+export const hasOwnParent = (c) => !!c.parent && c.parent.trim().toLowerCase() !== String(c.name).trim().toLowerCase();
+
 /** Case-insensitive filter on name or parent. */
 export const filterConcepts = (concepts, query) => {
   const q = String(query || "").trim().toLowerCase();
@@ -117,7 +120,7 @@ export const renderTags = (ctx, experimentId) => {
     const shown = found.slice(0, MAX_LISTED);
     setChildren(list,
       shown.map((c) => el("li", null, el("button", {type: "button", class: "concept", onclick: () => addTag(c)},
-        c.name, c.parent ? el("span", {class: "muted"}, ` (${c.parent})`) : null))),
+        c.name, hasOwnParent(c) ? el("span", {class: "muted"}, ` (${c.parent})`) : null))),
       found.length > shown.length ? el("li", {class: "muted"}, `${found.length - shown.length} more, type to filter`) : null,
       found.length === 0 ? el("li", {class: "muted"}, "No term matches") : null);
   };

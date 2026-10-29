@@ -58,7 +58,7 @@ test("article page: database content is only ever text (no script/img elements)"
   assert.ok(t.includes("not bold"));
   assert.ok(!t.includes("window.__xss"), "script content removed from the abstract");
   assert.ok(t.includes("<img src=x onerror=alert(1)>"), "hostile MeSH name shown literally as text");
-  assert.ok(t.includes("Activations for task vs baseline"));
+  assert.ok(t.includes("Activations for <b>task</b> vs baseline"));
   // the coordinates
   assert.ok(root.byTag("td").some((td) => td.textContent === "-42"));
 });

@@ -108,3 +108,26 @@ export const decodeEntities = (s) => {
 
 /** decodeEntities, then a text node. */
 export const decoded = (s) => text(decodeEntities(s));
+
+/**
+ * Decode ONLY character references ("&amp;", "&lt;", "&#233;"...); nothing is treated as markup. For text
+ * the user can edit (experiment titles and captions): "Faces<Houses contrast" stays as it is, "&lt;b&gt;"
+ * becomes the text "<b>". Every "<" is escaped before the inert parser sees the string, so no tag can form.
+ */
+export const decodeEntitiesOnly = (s) => {
+  if (s === null || typeof s === "undefined") {
+    return "";
+  }
+  const parsed = new DOMParser().parseFromString(String(s).replace(/</g, "&lt;"), "text/html");
+
+  return parsed.documentElement.textContent || "";
+};
+
+/** decodeEntitiesOnly, then a text node. */
+export const decodedOnly = (s) => text(decodeEntitiesOnly(s));
+
+/**
+ * What to store for text typed by the user so that decodeEntitiesOnly gives back exactly the typed text:
+ * "&" becomes "&amp;" ("<" needs no encoding).
+ */
+export const encodeUserText = (s) => String(s).replace(/&/g, "&amp;");

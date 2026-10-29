@@ -9,7 +9,7 @@
  * Part 1 (pure, unit tested): validation and the construction of ops from user actions.
  * Part 2: the editor of one experiment (DOM).
  */
-import {el, setChildren, text, decodeEntities} from "./dom.js";
+import {el, setChildren, text, decodeEntitiesOnly, encodeUserText} from "./dom.js";
 import {createStatus} from "./context.js";
 import {parseLocations, openImportDialog, MAX_ROWS} from "./import-table.js";
 import * as api from "./api.js";
@@ -50,7 +50,7 @@ export const parseXyz = (strings) => {
   return {ok: true, xyz};
 };
 
-/** "x,y,z" (as stored) -> [x, y, z] */
+/** "x,y,z" (as stored) -> [x, y, z]; legacy rows may have more values ("x,y,z,zscore"), all are returned. */
 export const parseLocation = (loc) => String(loc).split(",").map((v) => parseFloat(v));
 
 const isIndex = (i, max) => Number.isInteger(i) && i >= 0 && i <= max;
@@ -144,14 +144,15 @@ export const opReplaceFromText = (s) => {
 export const sameXyz = (loc, xyz) => {
   const a = parseLocation(loc);
 
-  return a.length === 3 && a.every((v, k) => v === xyz[k]);
+  return a.length >= 3 && [0, 1, 2].every((k) => a[k] === xyz[k]);
 };
 
 // ---- Part 2: the editor ---------------------------------------------------------------------
 
+// titles and captions: only character references are decoded, never markup ("Faces<Houses" stays)
 const plain = (s) => {
   try {
-    return decodeEntities(s);
+    return decodeEntitiesOnly(s);
   } catch (err) {
     return String(s === null || typeof s === "undefined" ? "" : s);
   }
@@ -216,7 +217,7 @@ export const createEditor = (deps) => {
       setChildren(viewerSlot, host);
     }
     setChildren(host); // rebuild: the viewer has no update API
-    const locations = rowsOf().map(parseLocation);
+    const locations = rowsOf().map((l) => parseLocation(l).slice(0, 3));
     Promise.resolve().then(() => info.createViewer(host.getAttribute("id"), locations)).catch((err) => {
       console.log("viewer failed", err);
     });
@@ -224,10 +225,10 @@ export const createEditor = (deps) => {
 
   const showTexts = () => {
     if (slots.title) {
-      setChildren(slots.title, text(ex.title));
+      setChildren(slots.title, text(plain(ex.title)));
     }
     if (slots.caption) {
-      setChildren(slots.caption, text(ex.caption));
+      setChildren(slots.caption, text(plain(ex.caption)));
     }
   };
 
@@ -293,6 +294,16 @@ export const createEditor = (deps) => {
   const applyResult = (res, ops) => {
     if (info.setRev && res && Number.isInteger(res.rev)) {
       info.setRev(res.rev);
+    }
+    if (res && Array.isArray(res.experiments) && res.experiments.length === 0) {
+      // the server found nothing to change (no new rev): close the editor, keep the page as it is
+      selected = null;
+      editing = null;
+      adding = null;
+      textEdit = null;
+      render();
+
+      return;
     }
     const mine = res && Array.isArray(res.experiments) ? res.experiments.find((e) => e.id === ex.id) : null;
     if (!mine) {
@@ -408,7 +419,9 @@ export const createEditor = (deps) => {
 
       return;
     }
-    const built = field === "title" ? opSetTitle(value) : opSetCaption(value);
+    // stored with "&" encoded so that the page shows exactly what was typed (legacy values hold entities)
+    const stored = encodeUserText(value);
+    const built = field === "title" ? opSetTitle(stored) : opSetCaption(stored);
     if (!built.ok) {
       showMessage(built.error);
 
@@ -534,22 +547,27 @@ export const createEditor = (deps) => {
         button("Add row", () => startAdd(0)), " ", button("Import from text", doImport));
     }
     const trs = [];
+    // legacy rows may carry extra values (e.g. a z-score): shown read-only in one more column, only if some row has one
+    const hasExtra = rows.some((l) => parseLocation(l).length > 3);
+    const extraCell = (vals) => (hasExtra ? el("td", {class: "te-extra muted", title: "Not editable; kept when the row is edited"}, vals.join(", ")) : null);
     const addRowTr = () => {
       const r = rowInputs(null);
 
-      return el("tr", {class: "te-new"}, r.cells, r.actions);
+      return el("tr", {class: "te-new"}, r.cells, extraCell([]), r.actions);
     };
     if (adding === 0) {
       trs.push(addRowTr());
     }
     rows.forEach((loc, i) => {
       if (editing === i) {
-        const r = rowInputs(parseLocation(loc));
-        trs.push(el("tr", {class: "te-selected te-editing"}, r.cells, r.actions));
+        const vals = parseLocation(loc);
+        const r = rowInputs(vals.slice(0, 3));
+        trs.push(el("tr", {class: "te-selected te-editing"}, r.cells, extraCell(vals.slice(3)), r.actions));
       } else {
         const xyz = parseLocation(loc);
         trs.push(el("tr", {class: selected === i ? "te-selected" : "", onclick: () => startEdit(i), title: "Click to select and edit"},
-          xyz.map((v) => el("td", null, v)),
+          xyz.slice(0, 3).map((v) => el("td", null, v)),
+          extraCell(xyz.slice(3)),
           el("td", {class: "te-actions", onclick: (ev) => ev.stopPropagation && ev.stopPropagation()},
             button("+", () => startAdd(i + 1), {title: "Insert a row after this one", "aria-label": `Insert a row after row ${i + 1}`}),
             button("-", () => doDelete(i), {title: "Delete this row", "aria-label": `Delete row ${i + 1}`}))));
@@ -562,6 +580,7 @@ export const createEditor = (deps) => {
     return el("div", {class: "te-scroll"}, el("table", {class: "te-table"},
       el("thead", null, el("tr", null,
         el("th", null, "X"), el("th", null, "Y"), el("th", null, "Z"),
+        hasExtra ? el("th", {title: "Extra values of the original data (read-only)"}, "Extra") : null,
         el("th", {class: "te-actions"}, button("+", () => startAdd(rows.length), {title: "Add a row at the end", "aria-label": "Add a row at the end"})))),
       el("tbody", null, trs)));
   };
