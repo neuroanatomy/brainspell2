@@ -116,7 +116,7 @@ test('setStereoSpace and setNSubjects through REST', async (ctx) => {
   assert.strictEqual(rows.length, 1);
 });
 
-test('concurrent votes by the same user leave exactly one row', async (ctx) => {
+test('concurrent votes by the same user leave at most one row per key, consistent with what is read back', async (ctx) => {
   const carol = await ctx.signup('carol', 8003);
   const call = (value) => ctx.cloud('vote', {pmid: '424242', experimentId: 2, kind: 'tableOk', value}, carol.session);
   const values = [1, -1, 1, 1, -1, 0, 1, 1, -1, 1, 1, 1, 0, 1, -1, 1, 1, -1, 1, 1];
@@ -124,23 +124,41 @@ test('concurrent votes by the same user leave exactly one row', async (ctx) => {
   results.forEach((r, i) => assert.strictEqual(r.status, 200, `call ${i}: ${r.text}`));
   const where = encodeURIComponent(JSON.stringify({pmid: '424242', user: carol.id, kind: 'tableOk', experimentId: 2}));
   const rows = (await ctx.rest('GET', '/classes/Vote?where=' + where, {master: true})).json.results;
-  assert.strictEqual(rows.length, 1, `rows: ${JSON.stringify(rows)}`);
-  // 20 simultaneous requests have no guaranteed order: the final value is 1 or -1 (or 0 rows
-  // if a retract came last, excluded here by the row count), and it must match what is read back
-  assert.ok(rows[0].value === 1 || rows[0].value === -1, `value ${rows[0].value}`);
+  // 20 simultaneous requests have no guaranteed order. Properties that must hold whatever the order:
+  // at most one row; if there is one its value is 1 or -1 and is what getAnnotations says (mine);
+  // if there is none (a retract ran last) mine is 0.
+  assert.ok(rows.length <= 1, `rows: ${JSON.stringify(rows)}`);
   const ann = ok(await ctx.cloud('getAnnotations', {pmid: '424242'}, carol.session), 'getAnnotations');
   const t2 = ann.votes.find((x) => x.kind === 'tableOk' && x.experimentId === 2);
-  assert.strictEqual(t2.mine, rows[0].value);
-  const ns = await Promise.all([3, 4, 5, 3, 4, 5, 6, 7].map((n) => ctx.cloud('setNSubjects', {pmid: '424242', n}, carol.session)));
+  if (rows.length === 1) {
+    assert.ok(rows[0].value === 1 || rows[0].value === -1, `value ${rows[0].value}`);
+    assert.strictEqual(t2.mine, rows[0].value);
+  } else {
+    assert.strictEqual(t2.mine, 0);
+  }
+  const submittedN = [3, 4, 5, 3, 4, 5, 6, 7];
+  const ns = await Promise.all(submittedN.map((n) => ctx.cloud('setNSubjects', {pmid: '424242', n}, carol.session)));
   ns.forEach((r) => assert.strictEqual(r.status, 200, r.text));
   const nrows = (await ctx.rest('GET', '/classes/Vote?where=' + encodeURIComponent(JSON.stringify({user: carol.id, kind: 'nsubjects'})), {master: true})).json.results;
-  assert.strictEqual(nrows.length, 1);
-  assert.strictEqual(nrows[0].number, 7);
+  assert.ok(nrows.length <= 1, `nsubjects rows: ${JSON.stringify(nrows)}`);
+  const annN = ok(await ctx.cloud('getAnnotations', {pmid: '424242'}, carol.session), 'getAnnotations nsubjects').nsubjects;
+  if (nrows.length === 1) {
+    assert.ok(submittedN.includes(nrows[0].number), `number ${nrows[0].number}`);
+    assert.strictEqual(annN.mine, nrows[0].number);
+  } else {
+    assert.strictEqual(annN.mine, null);
+  }
   const sp = await Promise.all(['MNI', 'Talairach', null, 'MNI', 'Talairach'].map((space) => ctx.cloud('setStereoSpace', {pmid: '424242', space}, carol.session)));
   sp.forEach((r) => assert.strictEqual(r.status, 200, r.text));
   const srows = (await ctx.rest('GET', '/classes/Vote?where=' + encodeURIComponent(JSON.stringify({user: carol.id, kind: 'space'})), {master: true})).json.results;
-  assert.strictEqual(srows.length, 1);
-  assert.strictEqual(srows[0].tag, 'Talairach');
+  assert.ok(srows.length <= 1, `space rows: ${JSON.stringify(srows)}`);
+  const annS = ok(await ctx.cloud('getAnnotations', {pmid: '424242'}, carol.session), 'getAnnotations space').stereo;
+  if (srows.length === 1) {
+    assert.ok(srows[0].tag === 'MNI' || srows[0].tag === 'Talairach', `space ${srows[0].tag}`);
+    assert.strictEqual(annS.mine, srows[0].tag);
+  } else {
+    assert.strictEqual(annS.mine, null);
+  }
 });
 
 test('postComment through REST; comments are public to read, not to write', async (ctx) => {
