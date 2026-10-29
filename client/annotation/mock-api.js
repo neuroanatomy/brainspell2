@@ -403,11 +403,14 @@ export const createMockApi = (opts = {}) => {
           break;
         }
         case "replaceFromText": {
+          // normative grammar (plan 4.3): same as import-table.js parseLocations and the server's parser
           const rows = [];
-          for (const line of str(op.text, "text", 0, 1e6).split("\n")) {
-            const nums = (line.replace(/−/g, "-").match(/-?\d+(\.\d+)?/g) || []).slice(0, 3).map(Number);
-            if (nums.length === 3) { rows.push(nums); }
-          }
+          str(op.text, "text", 0, 1e6).split(/\r\n|\r|\n/).forEach((line, li) => {
+            const nums = (line.match(/[-+−]?(?:\d+(?:\.\d+)?|\.\d+)/g) || []).slice(0, 3).map((t) => Number(t.replace(/\u2212/g, "-")));
+            if (nums.length < 3) { return; }
+            if (!nums.every((n) => Math.abs(n) <= 200)) { fail(E.VALIDATION, `line ${li + 1}: coordinates must be between -200 and 200`); }
+            rows.push(nums);
+          });
           if (!rows.length) { fail(E.VALIDATION, "text has no valid line"); }
           ex.locations = rows.map((r) => r.map(fmt).join(","));
           break;
