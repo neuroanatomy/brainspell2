@@ -75,3 +75,48 @@ Run it with `cd client && node --test test/css-architecture.test.js`.
 | `--radius`, `--radius-round`, `--border-width`, `--border-width-band`, `--focus-ring-*`, `--shadow-popup` | shape |
 | `--control-min-height`, `--hit-area`, `--hit-area-touch`, `--content-max-width`, `--viewer-size`, `--table-max-height`, `--popup-width`, `--menu-width`, `--coord-col-width` | sizes |
 | `--z-base`, `--z-header`, `--z-popup`, `--duration-fast` | layers and motion (0 for `prefers-reduced-motion`) |
+
+## Smoke test (run it before every deployment)
+
+`node client/test/tools/smoke.mjs <base-url>` (outside `node --test`; needs Chrome and Node >= 22). Serve `client/` with a `config.json` that points to a
+real Parse server (gitignored), or give the address of the live site:
+
+    cd client && python3 -m http.server 8000 --bind 127.0.0.1 &
+    node client/test/tools/smoke.mjs http://127.0.0.1:8000 --shots=/tmp/shots     # dark and light; --theme=dark for one
+
+It starts headless Chrome with software WebGL, loads home, `search.html?q=prosodic`, `article.html?pmid=18420426` and `collections.html`, and
+**fails (exit 1)** on a JS exception, a CSP violation, a console error outside a short allow-list (three.js deprecations, GPU stall, favicon), a search page
+without "N articles found" / result items / a non-zero #viewer and canvas, a visible link, button, input, heading, list item or table cell covered by
+another element, or a wrong theme. It prints a PASS/FAIL table. (It would have caught both the covered results list and the 840x0 viewer.)
+
+## Migration audit (commit 8216595: `style.css`, `annotation.css`, `table-edit.css`, `collections.css`, inline styles -> now)
+
+Method: every selector of the four old files was looked up in the new `base/components/layout.css`, then the properties of the selectors that exist in both
+were compared, then the page scripts were grepped for ids and classes they use. "Lost" = missing without a reason.
+
+| Old rule | Now | Verdict |
+|---|---|---|
+| `* {font-size:14px; color:white; z-index:1}` | `html, body` in `base.css` (font, colour tokens) | intentionally removed; the `z-index:1` on everything is what hid the search results under the backdrop (see `--z-backdrop`) |
+| `#viewer {width:800px; height:640px}` | `#viewer` in `layout.css`: `width:100%; max-width:var(--search-viewer-width); aspect-ratio:var(--search-viewer-ratio)` | **LOST, restored** (canvas was 840x0 and the brain disappeared) |
+| `#viewer-info {position:absolute; top:5px; left:5px; pointer-events:none; z-index:10}` | `#viewer-info` in `layout.css` with tokens | **LOST, restored** |
+| `#viewer-container {position:relative}` | `layout.css` | kept |
+| `.linkNoULine {text-decoration:none; font-weight:lighter}` | `.site-footer a` (no underline) and `.linkNoULine` (weight) | weight **LOST, restored** |
+| `#level`, `#levelValue`, `#paper-list`, `#num-found`, `#num-articles` | had no CSS in the old files (browser defaults) | unchanged; `#level` only gets `vertical-align` |
+| `input#url, input#projectName {width, height:32px, border:0, padding:0, color:black}` | `layout.css` (size) + base input style (dark field, border, padding) | intentionally changed: the black text on a light field became a themed dark field |
+| `#menu {float:right; margin-right; transition:top .5s, opacity .5s; font; background}` | `#menu` in `layout.css` (fixed bar, tokens) | float and margin were overridden by `position:fixed` in the old file too; the transition was never triggered (no script changes `top` or `opacity` of the menu): intentionally removed |
+| `#MyLogin`, `#MyLogin.in`, `#MyLogin.in a` | `layout.css`; the link colour and underline come from `#menu a` and the default | kept |
+| `img.button`, `img.button:hover`, `img.icon`, `.icon`, `img#small-logo`, `img#logo`, `#background` | `layout.css` (`img.icon` and `.icon` are used by no page: intentionally removed) | kept |
+| `#footer {background:#000; z-index:2}` and inline `flex:0 0 100px; background-color:#000` | `.site-footer` (`--color-footer-bg`, `--footer-height`) | kept (dark in both themes) |
+| `#article {text-align:justify; max-width:800px}`, `#article p {column-count:2}` | `#article` width token, left-aligned, single column | intentionally changed (readability: justified two-column abstract) |
+| `.content`, `.content h2/p` | `layout.css` | kept |
+| `.mesh`, `.experiments`, `.experiment {margin-left:calc(...); max-width}` | `layout.css` (grid, tokens) | intentionally changed |
+| `.coords-table td/th`, `table th {background:#333}` | `base.css` (`th`), `components.css` (data-table) | kept |
+| `#table-wrapper`, `#table-scroll`, `#table`, `#table-wrapper table thead th .text` | the ids no longer exist in the markup (`article.js` builds `.coords-scroll`, `.te-scroll`) | intentionally removed |
+| `.noEmptyWithPlaceholder:empty:before` | `layout.css` (`::before`, muted token) | kept |
+| `annotation.css`: `.tag` pill, `.bal-*` fills, `.mesh-item`, `.vote-controls`, `button.vote*`, `.tag-popup`, `.tag .counts` | `components.css`: chip (`button.tag.chip`), band colours, `.vote-popup`, `.segmented` | replaced by the redesign (inline Agree/Disagree buttons no longer exist) |
+| `annotation.css`: `.tag-picker`, `.tag-ontologies`, `ul.tag-concepts`, `button.concept`, `input.tag-filter`, `input.nsubjects-input`, `.comments`, `li.comment`, `.comment-body`, `.comment-box textarea`, `.meta`, `.meta-row`, `.table-ok`, `.empty-table`, `.error`, `.muted`, `.ann-status`, `.login-hint` | `components.css` | kept (controls take their colours from `base.css`) |
+| `table-edit.css`: `.te-*`, `.te-import*`, `.add-article`, `.add-ntables` | `components.css` (`.te-bar`/`.te-textform` replaced by the toolbar and in-place form; `.experiment.te-active` max-width replaced by the grid) | kept or replaced |
+| `collections.css`: `[hidden]`, `#collections-link`, `.muted`, `.error`, `.col-*`, `.collection` | `base.css` / `layout.css` / `components.css` | kept (`.col-select` rewritten: aligned with the first line of the title) |
+| inline styles of `index/search/article/collections.html` (39) and the `<style>` of `search.html` | named classes in `layout.css` (`.page*`, `.search-box`, `svg.backdrop-svg` ...) | kept; the search backdrop now has `z-index: var(--z-backdrop)` |
+| `body`/`html` `-moz-font-smoothing`, `-webkit-transition` prefixes | -- | intentionally removed (obsolete) |
+| ids/classes used by page scripts without CSS (`#level`, `#levelValue`, `#num-found`, `#num-articles`, `#paper-list`, `#selection-toolbar`, `#collections`, `#query-result`, `#data`) | none ever had CSS or are styled through their children | checked |

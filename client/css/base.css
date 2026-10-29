@@ -129,6 +129,17 @@ textarea {
   opacity: 1;
 }
 
+input[type="checkbox"],
+input[type="radio"] {
+  width: var(--checkbox-size);
+  height: var(--checkbox-size);
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
 button:disabled,
 input:disabled,
 textarea:disabled,

@@ -8,7 +8,7 @@
   position: fixed;
   top: 0;
   width: 100%;
-  height: var(--space-6);
+  min-height: var(--space-6);
   padding-top: var(--space-2);
   box-sizing: content-box;
   background: var(--color-header-bg);
@@ -216,8 +216,39 @@ img.button.icon-sm {
   min-width: 0;
 }
 
+/* the coactivation viewer of the search page: the renderer is sized ONCE, from this element, when the page starts,
+   so the element needs a height defined in CSS (aspect-ratio) before that; the canvas never overflows when the window shrinks */
 #viewer-container {
   position: relative;
+}
+
+#viewer {
+  width: 100%;
+  max-width: var(--search-viewer-width);
+  aspect-ratio: var(--search-viewer-ratio);
+  overflow: hidden;
+}
+
+#viewer canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+#viewer-info {
+  position: absolute;
+  top: var(--space-1);
+  left: var(--space-1);
+  z-index: var(--z-overlay);
+  pointer-events: none;
+}
+
+.linkNoULine {
+  font-weight: var(--font-weight-light);
+}
+
+#level {
+  vertical-align: middle;
 }
 
 /* ---- home page and search page --------------------------------------------------------------------- */

@@ -512,9 +512,23 @@ li.comment {
   font-size: var(--font-size-sm);
 }
 
+/* the checkbox of a search result sits on the first line of the title (a 24px hit area centred on that line) */
 .col-select {
-  display: inline-block;
-  min-width: 1.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: top;
+  min-width: var(--hit-area);
+  height: var(--hit-area);
+  margin: calc((var(--font-size-base) * var(--line-height-base) - var(--hit-area)) / 2) var(--space-1) 0 0;
+}
+
+.col-select:empty {
+  display: none;
+}
+
+.col-select input[type="checkbox"] {
+  cursor: pointer;
 }
 
 .col-add {

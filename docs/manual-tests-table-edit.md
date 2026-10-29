@@ -6,6 +6,10 @@ steps against a real server. Keep the console open: no "Refused to ..." CSP mess
 parameters: `latency=1500` makes the "Saving…" state visible; `fail=155` / `fail=142` make every write fail with that code; `theme=light`.
 Fixture 12345: experiment 0 has 5 rows, experiment 1 has 2 rows, experiment 2 is empty.
 
+**Run this first:** `node client/test/tools/smoke.mjs <base-url>` (see `client/css/README.md`, "Smoke test"). It loads home, search (`?q=prosodic`), an article and the collections page
+in headless Chrome with WebGL, in both themes, and fails on JS exceptions, CSP violations, console errors, a search page without results or with an empty 3D viewer, and any element
+covered by another. Only continue with the manual steps below when it prints PASS.
+
 What the editor looks like (logged in): under the title there is a small **pencil icon** (✎, "Edit title") and one next to the caption
 ("Edit caption"). Beside the 3D viewer the coordinate table has columns X Y Z and, in the header, a round **"+" (Add row)**; each row has a round
 **"+" (Add row after this row)** and a round **"−" (Delete this row)** that appear when the row is hovered, focused or selected (always visible on

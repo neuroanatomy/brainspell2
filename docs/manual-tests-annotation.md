@@ -5,6 +5,10 @@ server (for the mock no `config.json` is needed), e.g. `cd client && python3 -m 
 `http://localhost:8000/article.html?pmid=12345&mock=1`. Keep the browser console open: a Content-Security-Policy violation is a red
 "Refused to ..." message (there should be none; `style-src` no longer allows inline styles). Sections A to C use the mock, D a real server.
 
+**Run this first:** `node client/test/tools/smoke.mjs <base-url>` (see `client/css/README.md`, "Smoke test"). It loads home, search (`?q=prosodic`), an article and the collections page
+in headless Chrome with WebGL, in both themes, and fails on JS exceptions, CSP violations, console errors, a search page without results or with an empty 3D viewer, and any element
+covered by another. Only continue with the manual steps below when it prints PASS.
+
 Mock URL parameters: `mock=1` anonymous; `as=alice` logged in as alice; `fail=155` (or 142, 206, ...) every write fails with that code;
 `latency=1500` slows answers so the "Saving..." state is visible; `theme=light` / `theme=dark` the theme (remembered). The mock keeps
 its data in memory: a reload resets it. Fixture articles: `12345` (legacy votes, 3 experiments, one empty, hostile strings) and `67890`
