@@ -115,6 +115,15 @@ textarea {
   resize: vertical;
 }
 
+/* bigger targets for fingers */
+@media (pointer: coarse) {
+  button,
+  input,
+  select {
+    min-height: var(--hit-area-touch);
+  }
+}
+
 ::placeholder {
   color: var(--color-text-muted);
   opacity: 1;

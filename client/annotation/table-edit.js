@@ -186,9 +186,37 @@ export const createEditor = (deps) => {
   const viewerSlot = el("div", {class: "te-viewer-slot"});
   const main = el("div", {class: "te-main"});
   const importSlot = el("div");
+  // title and caption are edited in place: a pencil button next to the text, a form instead of the text
+  const fallbackBox = (cls) => el("div", {class: cls});
+  const boxes = {
+    title: slots.titleBox || (slots.title && slots.title.parentNode) || fallbackBox("te-fallback-title"),
+    caption: slots.captionBox || (slots.caption && slots.caption.parentNode) || fallbackBox("te-fallback-caption")
+  };
+  const pencils = {};
+  const forms = {};
   const root = el("div", {class: "te-root"}, viewerSlot, main);
   root.hidden = true;
   (slots.coords || container).appendChild(root);
+  [["title", "Edit title"], ["caption", "Edit caption"]].forEach(([field, label]) => {
+    pencils[field] = el("button", {type: "button", class: "icon-btn btn-quiet te-pencil", "aria-label": label, title: label,
+      onclick: () => startTextEdit(field)}, el("span", {"aria-hidden": "true"}, "\u270E"));
+    forms[field] = el("div", {class: "te-inline-form"});
+    forms[field].hidden = true;
+    pencils[field].hidden = true;
+    boxes[field].appendChild(pencils[field]);
+    boxes[field].appendChild(forms[field]);
+    if (!boxes[field].parentNode) {
+      root.appendChild(boxes[field]);
+    }
+    if (slots[field] && slots[field].addEventListener) {
+      // clicking the text also starts editing it (for logged-in users)
+      slots[field].addEventListener("click", () => {
+        if (user() && !busy) {
+          startTextEdit(field);
+        }
+      });
+    }
+  });
 
   const rowsOf = () => ex.locations || [];
   const showMessage = (msg) => status.error({code: 142, message: msg});
@@ -343,6 +371,15 @@ export const createEditor = (deps) => {
     render();
   };
 
+  const startTextEdit = (field) => {
+    if (busy || !user()) {
+      return;
+    }
+    cancelEdits();
+    textEdit = field;
+    render();
+  };
+
   const startAdd = (at) => {
     if (busy) {
       return;
@@ -455,6 +492,7 @@ export const createEditor = (deps) => {
   // ---- drawing ------------------------------------------------------------------------------------
   const button = (label, onclick, attrs) => el("button", {type: "button", class: "te-btn", onclick, ...attrs}, label);
 
+
   const onKey = (inputs, last) => (ev) => {
     if (ev.key === "Enter" || (ev.key === "Tab" && !ev.shiftKey && last)) {
       ev.preventDefault();
@@ -478,19 +516,22 @@ export const createEditor = (deps) => {
       inputs,
       cells: inputs.map((inp) => el("td", null, inp)),
       actions: el("td", {class: "te-actions"},
-        button("Save", () => commitEdit(inputs), {title: "Save the row (Enter)"}),
-        button("Cancel", cancelAll, {title: "Cancel (Esc)"}))
+        iconButton("\u2713", "Save row", () => commitEdit(inputs)),
+        iconButton("\u2715", "Cancel editing the row", cancelAll))
     };
   };
 
-  const textForm = () => {
-    const field = textEdit;
+  const iconButton = (symbol, label, onclick) => el("button", {type: "button", class: "icon-btn", "aria-label": label, title: label, onclick},
+    el("span", {"aria-hidden": "true"}, symbol));
+
+  /** The form that replaces the title or the caption while it is edited (Enter saves a title, Esc reverts). */
+  const textForm = (field) => {
     const isTitle = field === "title";
     const max = isTitle ? LIMITS.title : LIMITS.caption;
     const initial = plain(ex[field]);
     const input = isTitle
       ? el("input", {type: "text", class: "te-text", maxlength: max, value: initial, "aria-label": "Title"})
-      : el("textarea", {class: "te-text", rows: 5, maxlength: max, "aria-label": "Caption"});
+      : el("textarea", {class: "te-text", rows: 4, maxlength: max, "aria-label": "Caption"});
     if (!isTitle) {
       input.value = initial;
     }
@@ -498,45 +539,47 @@ export const createEditor = (deps) => {
       if (ev.key === "Escape") {
         ev.preventDefault();
         cancelAll();
-      } else if (isTitle && ev.key === "Enter") {
+      } else if (ev.key === "Enter" && (isTitle || ev.ctrlKey || ev.metaKey)) {
         ev.preventDefault();
         saveText(field, input.value);
       }
     });
     focusEl = input;
 
-    return el("div", {class: "te-textform"},
-      el("label", null, isTitle ? "Title" : "Caption", " (at most ", max, " characters, plain text)"), el("br"),
-      input, el("br"),
-      button("Save", () => saveText(field, input.value)), button("Cancel", cancelAll));
+    return [input,
+      el("div", {class: "te-form-buttons"},
+        button("Save", () => saveText(field, input.value), {class: "te-btn btn-primary"}), button("Cancel", cancelAll),
+        el("span", {class: "muted"}, `plain text, at most ${max} characters${isTitle ? "" : "; Ctrl+Enter saves"}`))];
   };
 
-  const bar = () => {
-    if (textEdit) {
-      return textForm();
-    }
+  const renderTexts = () => {
+    ["title", "caption"].forEach((field) => {
+      const on = !!user();
+      const editingThis = on && textEdit === field;
+      pencils[field].hidden = !on || editingThis;
+      forms[field].hidden = !editingThis;
+      setChildren(forms[field], editingThis ? textForm(field) : null);
+      if (slots[field]) {
+        slots[field].hidden = editingThis;
+      }
+    });
+  };
+
+  const toolbar = () => {
     const rows = rowsOf();
-    const kids = [
-      button("Edit title", () => {
-        cancelEdits();
-        textEdit = "title";
-        render();
-      }),
-      button("Edit caption", () => {
-        cancelEdits();
-        textEdit = "caption";
-        render();
-      }),
-      button("Import from text", doImport)
-    ];
+    if (rows.length === 0 && adding === null) {
+      return null; // the empty-table prompt has its own Add row / Import buttons
+    }
+    const kids = [button("Import from text", doImport, {title: "Replace this table with coordinates pasted as text"})];
     if (rows.length > 1) {
+      const need = selected === null || selected === 0;
       kids.push(button("Split here", doSplit, {
-        title: "Select a row (click on it); the table is cut before that row",
-        disabled: selected === null || selected === 0
+        title: need ? "Select a row after the first one (click on it): the table is cut before that row" : "Cut the table before the selected row",
+        disabled: need
       }));
     }
 
-    return el("div", {class: "te-bar"}, kids);
+    return el("div", {class: "te-toolbar", role: "toolbar", "aria-label": "Table tools"}, kids);
   };
 
   const table = () => {
@@ -568,9 +611,9 @@ export const createEditor = (deps) => {
         trs.push(el("tr", {class: selected === i ? "te-selected" : "", onclick: () => startEdit(i), title: "Click to select and edit"},
           xyz.slice(0, 3).map((v) => el("td", null, v)),
           extraCell(xyz.slice(3)),
-          el("td", {class: "te-actions", onclick: (ev) => ev.stopPropagation && ev.stopPropagation()},
-            button("+", () => startAdd(i + 1), {title: "Insert a row after this one", "aria-label": `Insert a row after row ${i + 1}`}),
-            button("-", () => doDelete(i), {title: "Delete this row", "aria-label": `Delete row ${i + 1}`}))));
+          el("td", {class: "te-actions row-actions", onclick: (ev) => ev.stopPropagation && ev.stopPropagation()},
+            iconButton("+", "Add row after this row", () => startAdd(i + 1)),
+            iconButton("\u2212", "Delete this row", () => doDelete(i)))));
       }
       if (adding === i + 1) {
         trs.push(addRowTr());
@@ -581,7 +624,7 @@ export const createEditor = (deps) => {
       el("thead", null, el("tr", null,
         el("th", null, "X"), el("th", null, "Y"), el("th", null, "Z"),
         hasExtra ? el("th", {title: "Extra values of the original data (read-only)"}, "Extra") : null,
-        el("th", {class: "te-actions"}, button("+", () => startAdd(rows.length), {title: "Add a row at the end", "aria-label": "Add a row at the end"})))),
+        el("th", {class: "te-actions"}, iconButton("+", "Add row", () => startAdd(rows.length))))),
       el("tbody", null, trs)));
   };
 
@@ -594,14 +637,17 @@ export const createEditor = (deps) => {
       container.classList.remove("te-active");
       cancelEdits();
       importing = false;
+      renderTexts();
 
       return;
     }
     root.hidden = false;
     container.classList.add("te-active");
     focusEl = null;
-    setChildren(main, bar(), status.element, table(), importSlot);
-    status.watch(main.querySelectorAll ? Array.from(main.querySelectorAll("button")) : main.all((n) => n.tagName === "BUTTON"));
+    renderTexts();
+    setChildren(main, table(), toolbar(), status.element, importSlot);
+    const buttonsIn = (n) => (n.querySelectorAll ? Array.from(n.querySelectorAll("button")) : n.all((x) => x.tagName === "BUTTON"));
+    status.watch([...buttonsIn(main), ...buttonsIn(forms.title), ...buttonsIn(forms.caption), pencils.title, pencils.caption]);
     if (focusEl && focusEl.focus) {
       focusEl.focus();
     }

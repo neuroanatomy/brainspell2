@@ -82,6 +82,12 @@ export class FNode {
 
     return this.all((n) => n.tagName === "BUTTON" && visible(n) && (s === undefined || n.textContent.includes(s)));
   }
+  /** Visible buttons whose aria-label is exactly `label` (icon buttons have no text). */
+  byLabel(label) {
+    const visible = (n) => { for (let x = n; x; x = x.parentNode) { if (x.hidden) { return false; } } return true; };
+
+    return this.all((n) => n.tagName === "BUTTON" && visible(n) && n.getAttribute("aria-label") === label);
+  }
   findClass(c) { return this.all((n) => n.classList.contains(c)); }
 }
 

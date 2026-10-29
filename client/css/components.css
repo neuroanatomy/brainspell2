@@ -103,6 +103,13 @@ button.chip-add {
   color: var(--color-text-muted);
 }
 
+@media (pointer: coarse) {
+  button.tag.chip,
+  button.chip-add {
+    min-height: var(--hit-area-touch);
+  }
+}
+
 .mesh-list {
   margin-top: var(--space-2);
 }
@@ -320,35 +327,40 @@ li.comment {
   margin: var(--space-1) 0;
 }
 
-/* ==== table editor (legacy markup, replaced in stage 3) ================================================== */
-.experiment.te-active .exp-readonly {
+/* ==== data-table: read-only coordinates and the editable table ================================================== */
+/* while the editor is on, its editable table replaces the read-only one */
+.te-active .exp-readonly {
   display: none;
 }
 
-.te-root {
-  margin-top: var(--space-1);
+.coords-table,
+.te-table {
+  width: 100%;
 }
 
-.te-bar,
-.te-textform,
-.te-empty {
-  margin: var(--space-1) 0;
-}
-
-.te-btn {
-  margin: 0 var(--space-1) var(--space-1) 0;
-}
-
-.te-scroll {
-  max-height: var(--table-max-height);
-  overflow: auto;
-}
-
-.te-table th,
+.coords-table td,
 .te-table td {
-  padding: var(--space-1);
   text-align: center;
   white-space: nowrap;
+}
+
+.coords-table td:nth-child(n + 4),
+.te-extra {
+  color: var(--color-text-muted);
+}
+
+.te-scroll,
+.coords-scroll {
+  max-height: var(--table-max-height);
+  overflow: auto;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.te-scroll thead th,
+.coords-scroll thead th {
+  position: sticky;
+  top: 0;
 }
 
 .te-table tbody tr {
@@ -368,8 +380,89 @@ li.comment {
 }
 
 .te-cell {
-  width: 4.5em;
+  width: 100%;
+  min-width: 3.5rem;
   text-align: center;
+}
+
+.te-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* row buttons appear on hover or focus, and are always there on touch screens */
+.row-actions {
+  opacity: 0;
+  transition: opacity var(--duration-fast);
+}
+
+.te-table tr:hover .row-actions,
+.te-table tr:focus-within .row-actions,
+.te-table tr.te-selected .row-actions {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .row-actions {
+    opacity: 1;
+  }
+}
+
+/* ==== icon-button: round, icon only (always with an aria-label) ===================================================== */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--hit-area);
+  height: var(--hit-area);
+  min-height: var(--hit-area);
+  padding: 0;
+  border-radius: var(--radius-round);
+  font-size: var(--font-size-lg);
+  line-height: 1;
+}
+
+@media (pointer: coarse) {
+  .icon-btn {
+    width: var(--hit-area-touch);
+    height: var(--hit-area-touch);
+    min-height: var(--hit-area-touch);
+  }
+}
+
+.te-pencil {
+  color: var(--color-text-muted);
+}
+
+/* ==== toolbar: secondary buttons under the table ====================================================================== */
+.te-toolbar,
+.te-form-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1-5);
+  margin-top: var(--space-2);
+}
+
+.te-empty {
+  margin: var(--space-2) 0;
+}
+
+.te-root {
+  margin-top: var(--space-1);
+}
+
+.te-btn {
+  margin: 0;
+}
+
+.te-active .exp-title,
+.te-active .exp-caption {
+  cursor: text;
+}
+
+.te-inline-form {
+  flex-basis: 100%;
 }
 
 .te-text {
