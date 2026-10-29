@@ -69,7 +69,7 @@ async function ownCollection(user, id) {
 }
 
 Parse.Cloud.define('listCollections', async (request) => {
-  var {user} = await requireGithubUser(request);
+  var {user, githubId} = await requireGithubUser(request);
   validate.noUnknown(request.params, []);
   var q = new Parse.Query('Collection');
   q.equalTo('user', user.id);
@@ -82,7 +82,7 @@ Parse.Cloud.define('listCollections', async (request) => {
 });
 
 Parse.Cloud.define('saveCollection', async (request) => {
-  var {user} = await requireGithubUser(request);
+  var {user, githubId} = await requireGithubUser(request);
   var p = validate.noUnknown(request.params, ['id', 'name', 'add', 'remove']);
   var id = validate.has(p, 'id') ? collectionId(p.id) : null;
   var name = null;
@@ -94,9 +94,9 @@ Parse.Cloud.define('saveCollection', async (request) => {
   }
   var add = validate.has(p, 'add') ? pmidList(p.add, 'add') : [];
   var remove = validate.has(p, 'remove') ? pmidList(p.remove, 'remove') : [];
-  rateLimit.check(user.id, 'saveCollection');
+  rateLimit.check(String(githubId), 'saveCollection');
 
-  return withLock(`collections:${user.id}`, async () => {
+  return withLock(`collections:${githubId}`, async () => {
     var o;
     if (id) {
       o = await ownCollection(user, id);
@@ -134,11 +134,11 @@ Parse.Cloud.define('saveCollection', async (request) => {
 });
 
 Parse.Cloud.define('deleteCollection', async (request) => {
-  var {user} = await requireGithubUser(request);
+  var {user, githubId} = await requireGithubUser(request);
   var p = validate.noUnknown(request.params, ['id']);
   var id = collectionId(p.id);
 
-  return withLock(`collections:${user.id}`, async () => {
+  return withLock(`collections:${githubId}`, async () => {
     var o = await ownCollection(user, id);
     await o.destroy(MASTER);
 

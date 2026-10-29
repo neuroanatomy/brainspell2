@@ -261,15 +261,16 @@ test('vote: a duplicate row (crash) is healed by the next write and ignored on r
   assert.deepStrictEqual([t.agree, t.disagree], [0, 1]);
 }));
 
-test('getAnnotations reads at most 5000 vote rows, keeping the newest', () => withEnv(async (env) => {
-  for (let i = 0; i < 5003; i++) {
+test('getAnnotations reads at most 20000 vote rows and says so, keeping the newest', () => withEnv(async (env) => {
+  for (let i = 0; i < 20003; i++) {
     env.fake.add('Vote', {
       user: `u${i}`, login: 'x', pmid: '111', experimentId: 2, kind: 'tableOk', ontology: null, tag: 'ok', value: i < 3 ? -1 : 1, number: null
     });
   }
   const ann = await env.run('getAnnotations', {pmid: '111'});
   const t = ann.votes.find((x) => x.kind === 'tableOk' && x.experimentId === 2);
-  assert.deepStrictEqual([t.agree, t.disagree], [5000, 0]);
+  assert.deepStrictEqual([t.agree, t.disagree], [20000, 0]);
+  assert.strictEqual(ann.truncated, true);
 }));
 
 test('setStereoSpace', () => withEnv(async (env) => {

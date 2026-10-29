@@ -2,7 +2,7 @@
 'use strict';
 // Idempotent import of server/data/ontologies.json into the Parse class Concept (REST API).
 // Environment (never arguments, never printed):
-//   PARSE_SERVER_URL   e.g. http://localhost:1337/parse
+//   PARSE_URL          e.g. http://localhost:1337/parse (PARSE_SERVER_URL is accepted as an alias)
 //   PARSE_APP_ID
 //   PARSE_MASTER_KEY
 // Usage: node import-ontologies.js [--dry-run]
@@ -147,14 +147,16 @@ async function main(argv, env) {
     console.log('dry run, nothing sent:', JSON.stringify(await run(terms, null, { dryRun: true })));
     return;
   }
-  const missing = ['PARSE_SERVER_URL', 'PARSE_APP_ID', 'PARSE_MASTER_KEY'].filter((k) => !env[k]);
+  const serverUrl = env.PARSE_URL || env.PARSE_SERVER_URL;
+  const missing = [serverUrl ? null : 'PARSE_URL', env.PARSE_APP_ID ? null : 'PARSE_APP_ID', env.PARSE_MASTER_KEY ? null : 'PARSE_MASTER_KEY'].filter(Boolean);
   if (missing.length) { throw new Error('missing environment variables: ' + missing.join(', ')); }
-  const request = realHttp(env.PARSE_SERVER_URL, {
+  const request = realHttp(serverUrl, {
     'X-Parse-Application-Id': env.PARSE_APP_ID,
     'X-Parse-Master-Key': env.PARSE_MASTER_KEY
   });
-  const mountPath = new URL(env.PARSE_SERVER_URL).pathname.replace(/\/+$/, '');
+  const mountPath = new URL(serverUrl).pathname.replace(/\/+$/, '');
   console.log('done:', JSON.stringify(await run(terms, request, { mountPath })));
+  console.log('note: listConcepts keeps a one hour cache; restart pm2 (or wait one hour) to see the new terms.');
 }
 
 if (require.main === module) {

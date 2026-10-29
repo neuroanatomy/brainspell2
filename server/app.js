@@ -6,6 +6,7 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var {ParseServer} = require('parse-server');
 var oauthshim = require('oauth-shim');
+var {stripAuthData} = require('./lib/strip-auth-data');
 // Settings come from the environment; the defaults are the values used so far.
 const configPath = process.env.CONFIG || './config.json';
 const port = parseInt(process.env.PORT || '1337', 10);
@@ -40,7 +41,7 @@ app.get('/', (req, res) => {
   });
 });
 app.use('/parse/proxy', oauthshim);
-app.use('/parse', api);
+app.use('/parse', stripAuthData(config.parseConfig.masterKey), api);
 app.use('/proxy', oauthshim);
 app.listen(port, function() {
   console.log(`parse-server running on port ${port}.`);

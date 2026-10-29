@@ -9,13 +9,13 @@ var tableOps = require('../lib/table-ops');
 var {findArticle, articleData, MASTER} = require('../lib/articles');
 
 Parse.Cloud.define('editExperiment', async (request) => {
-  var {user, login} = await requireGithubUser(request);
+  var {user, login, githubId} = await requireGithubUser(request);
   var p = validate.noUnknown(request.params, ['pmid', 'experimentId', 'rev', 'ops']);
   var pmid = validate.pmid(p.pmid);
   var experimentId = validate.int(p.experimentId, 'experimentId', {min: 0, max: 1000000000});
-  var rev = validate.has(p, 'rev') ? validate.int(p.rev, 'rev', {min: 0, max: 1000000000}) : 0;
+  var rev = validate.int(p.rev, 'rev', {min: 0, max: 1000000000});
   var ops = tableOps.validateOps(p.ops);
-  rateLimit.check(user.id, 'editExperiment');
+  rateLimit.check(String(githubId), 'editExperiment');
 
   return withLock(`pmid:${pmid}`, async () => {
     var article = await findArticle(pmid);
@@ -29,7 +29,19 @@ Parse.Cloud.define('editExperiment', async (request) => {
     }
     var newRev = data.rev + 1;
 
-    // The revision is written first: an orphan revision (crash before the update) is harmless.
+    // The revision is written first, with applied: false, and marked applied once the article
+    // is updated. An unapplied revision (crash in between, or a failed update) is ignored by
+    // readers; a retry first removes unapplied revisions of the same rev, so two applied
+    // revisions with the same rev cannot exist.
+    var stale = new Parse.Query('Revision');
+    stale.equalTo('pmid', pmid);
+    stale.equalTo('rev', newRev);
+    stale.equalTo('applied', false);
+    stale.limit(100);
+    var old = await stale.find(MASTER);
+    for (var i = 0; i < old.length; i++) {
+      await old[i].destroy(MASTER);
+    }
     var revision = new Parse.Object('Revision');
     revision.setACL(new Parse.ACL());
     revision.set('pmid', pmid);
@@ -38,11 +50,14 @@ Parse.Cloud.define('editExperiment', async (request) => {
     revision.set('login', login);
     revision.set('ops', ops);
     revision.set('before', result.before);
+    revision.set('applied', false);
     await revision.save(null, MASTER);
 
     article.set('Experiments', result.experiments);
     article.set('rev', newRev);
     await article.save(null, MASTER);
+    revision.set('applied', true);
+    await revision.save(null, MASTER);
 
     return {rev: newRev, experiments: result.changed};
   });

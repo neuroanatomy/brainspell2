@@ -63,8 +63,8 @@ test('unknown article or experiment: 101', () => withEnv(async (env) => {
   assert.strictEqual(env.fake.rows('Revision').length, 0);
 }));
 
-test('missing rev is 0; success writes a Revision and bumps rev; other data untouched', () => withEnv(async (env) => {
-  const params = {pmid: '111', experimentId: 1, ops: [{op: 'updateRow', index: 0, xyz: [9, 9, 9]}, {op: 'setTitle', text: 'new'}]};
+test('success writes a Revision and bumps rev; other data untouched', () => withEnv(async (env) => {
+  const params = {pmid: '111', experimentId: 1, rev: 0, ops: [{op: 'updateRow', index: 0, xyz: [9, 9, 9]}, {op: 'setTitle', text: 'new'}]};
   const out = await env.edit(params);
   assert.strictEqual(out.rev, 1);
   assert.strictEqual(out.experiments.length, 1);
@@ -84,6 +84,7 @@ test('missing rev is 0; success writes a Revision and bumps rev; other data unto
   assert.strictEqual(revs[0].user, env.alice.id);
   assert.strictEqual(revs[0].login, 'alice');
   assert.deepStrictEqual(revs[0].ops, params.ops);
+  assert.strictEqual(revs[0].applied, true);
   assert.strictEqual(revs[0].before.length, 1);
   assert.strictEqual(revs[0].before[0].title, 'e1');
   assert.deepStrictEqual(revs[0].before[0].locations, ARTICLE().Experiments[0].locations);
@@ -101,7 +102,7 @@ test('the login stored is the verified one even if the profile is renamed on Git
 test('conflict: stale rev gives 1001 with the current rev; nothing is written', () => withEnv(async (env) => {
   await env.edit(title('a'));
   await env.expectCode(env.edit(title('b', {rev: 0})), 1001, /rev 1/);
-  await env.expectCode(env.edit(title('b', {rev: undefined})), 1001, /rev 1/);
+  await env.expectCode(env.edit(title('b', {rev: undefined})), 142, /rev/);
   await env.expectCode(env.edit(title('b', {rev: 2})), 1001, /rev 1/);
   assert.strictEqual(env.stored().Experiments[0].title, 'a');
   assert.strictEqual(env.fake.rows('Revision').length, 1);
